@@ -9,7 +9,7 @@
 void scriviUART(uart_port_t uart_controller, char* text);
 
 // read a line from the UART controller
-char* read_line(uart_port_t uart_controller);
+unsigned char* read_line(uart_port_t uart_controller);
 
 //print on default UART a text
 void stampaStringa(char* line);

@@ -1,7 +1,3 @@
-#ifndef UART_NUM_1
-// UART driver
-#include "driver/uart.h"
-#endif
 
 #define ADDR_MASTER_STATION 1
 #define ADDR_SLAVE_STATION 2
@@ -14,8 +10,6 @@
 
 #include <stdio.h>
 #include "string.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
 
 static const char *TAG = "OnlyHC12App";
 

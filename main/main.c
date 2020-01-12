@@ -1,4 +1,4 @@
-#include "funzioni.h"
+#include "funzioni_basic.h"
 #include <stdio.h> 
 #include <string.h>
 

@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := masterStation
+PROJECT_NAME := onlyHC12
 
 include $(IDF_PATH)/make/project.mk
 

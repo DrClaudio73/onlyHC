@@ -11,34 +11,12 @@ config BLINK_GPIO
 
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
-config RESET_SIM800GPIO
-    int "GPIO number for SIM800 module RESET pin"
+config COMMAND_PIN1
+    int "GPIO number for giving command"
 	range 0 34
 	default 4
 	help
-		GPIO number (IOxx) to reset SIM800 module (is the GPIO connected to RESET pin of SIM800).
-
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-
-		GPIOs 35-39 are input-only so cannot be used as outputs.
-
-config UART_SIM800TXGPIO
-    int "GPIO number for USART SIM800 TX pin"
-	range 0 34
-	default 22
-	help
-		GPIO number (IOxx) to receive from SIM800 (is the GPIO connected to TX pin of SIM800)
-
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-
-		GPIOs 35-39 are input-only so cannot be used as outputs.
-
-config UART_SIM800RXGPIO
-    int "GPIO number for USART SIM800 RX pin"
-	range 0 34
-	default 23
-	help
-		GPIO number (IOxx) to trasnmit to SIM800 (is the GPIO connected to RX pin of SIM800)
+		GPIO number (IOxx) to input command.
 
 		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
 
@@ -83,6 +61,12 @@ config CH_NO_HC12
 	help
 		Channel Number HC12 to exhcange data with slave station.
 
+config NUM_PRES_BLINKS
+    int "Number of presentation blinks"
+	default 3
+	help
+		Number of blinks at start_up.
+
 choice TRANSPARENTMODEBAUDHC12
 		prompt "Baud rate in transparent mode to remote station"
 		default BAUDTRANS2400
@@ -104,17 +88,6 @@ choice TRANSPARENTMODEBAUDHC12
 			bool "57600"
 		config BAUDTRANS115200
 			bool "115200"
-endchoice
-
-choice SIM800XMODULE
-		prompt "Type of SIM800x module"
-		default SIM800MODULE
-		help
-			Select type of module to be interfaced
-		config SIM800MODULE
-			bool "SIM800"
-		config SIM808MODULE
-			bool "SIM808"
 endchoice
 
 endmenu

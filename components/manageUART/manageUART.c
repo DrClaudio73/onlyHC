@@ -7,15 +7,15 @@ void scriviUART(uart_port_t uart_controller, char* text){
 }
 
 // read a line from the UART controller
-char* read_line(uart_port_t uart_controller) {
-    static char line[2048];
-    char *ptr = line;
+unsigned char* read_line(uart_port_t uart_controller) {
+    static unsigned char line[2048];
+    unsigned char *ptr = line;
     //printf("\nread_line on UART: %d\n", (int) uart_controller);
     while(1) {
         int num_read = uart_read_bytes(uart_controller, (unsigned char *)ptr, 1, 45/portTICK_RATE_MS); //portMAX_DELAY); 
         if(num_read == 1) {
             //printf("received char: %c", *ptr);
-            if(*ptr == '\n') { // new line found, terminate the string and return 
+            if(*ptr == 0x7f) { // new line found, terminate the string and return 
                 ptr++;
                 *ptr = '\0';
                 return line;
