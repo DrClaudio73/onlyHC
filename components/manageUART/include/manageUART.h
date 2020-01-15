@@ -6,7 +6,8 @@
 #endif
 
 //print on specified UART a text
-void scriviUART(uart_port_t uart_controller, char* text);
+//void scriviUART(uart_port_t uart_controller, char* text);
+int scriviUART(uart_port_t uart_controller, unsigned char* text);
 
 // read a line from the UART controller
 unsigned char* read_line(uart_port_t uart_controller);

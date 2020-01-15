@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/ccattaneo/esp/esp-idf/components/driver/include/driver",
+                "/home/ccattaneo/esp/esp-idf/components/freertos/include",
+                "/home/ccattaneo/esp/esp-idf/components/driver/include",
+                "/home/ccattaneo/esp/esp-idf/components/esp_common/include"
+            ],
+            "defines": [],
+            "compilerPath": "/home/ccattaneo/.espressif/tools/xtensa-esp32-elf/esp-2019r2-8.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}

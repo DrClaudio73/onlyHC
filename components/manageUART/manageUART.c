@@ -1,9 +1,9 @@
 #include "manageUART.h"
 
-void scriviUART(uart_port_t uart_controller, char* text){
-    uart_write_bytes(uart_controller, text, strlen(text));    
+int scriviUART(uart_port_t uart_controller, unsigned char* text){
+    int ret=uart_write_bytes(uart_controller, (char*) text, strlen((char *) text));    
     //printf("%s ---- %d",text,strlen(text));
-    return;
+    return ret;
 }
 
 // read a line from the UART controller
@@ -32,7 +32,6 @@ unsigned char* read_line(uart_port_t uart_controller) {
 }
 
 void stampaStringa(char* line){
-        //printf("Rcv%d: %s", numline,line);
         if(strlen(line)>1){
             printf("%s",line);
         }

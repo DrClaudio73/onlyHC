@@ -72,10 +72,10 @@ void pack_num(unsigned char* msg_to_send, unsigned char valore, unsigned char* k
 unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param) {
     static unsigned char msg_to_send[255];
 
-    unsigned char expectedACK[255];
-    unsigned char num_max_attempts=5;
-    unsigned char *line_read;
-    short success;
+    //unsigned char expectedACK[255];
+    //unsigned char num_max_attempts=5;
+    //unsigned char *line_read;
+    //short success;
 
     memset(msg_to_send,0,255);
 
@@ -102,6 +102,16 @@ unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, 
     if (DEBUG) {
         for(int i=0 ; i<strlen2(msg_to_send); i++){
         printf("*%d",msg_to_send[i]);
+        }
+        printf("*");
+        printf("\r\n");
+        for(int i=0 ; i<strlen2(msg_to_send); i++){
+        printf("*%x",msg_to_send[i]);
+        }
+        printf("*");
+        printf("\r\n");
+        for(int i=0 ; i<strlen2(msg_to_send); i++){
+        printf("*%c",msg_to_send[i]);
         }
         printf("*");
         printf("\r\n");
@@ -156,7 +166,7 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
     // 4 = MESSAGE NOT PROPERLY TERMINATED
     // 5 = MESSAGE SHORTER THAN EXPECTED
 
-    printf("----START UNpack str----\r\n");
+    printf("\r\nunpack_msg(): ----START UNpack str----\r\n");
     static unsigned char cmd_rcved[255];
     static unsigned char param_rcved[255];
     memset(cmd_rcved,0,255);
@@ -180,7 +190,7 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
     int totale=0;
 
     for (unsigned char i=0; i<strlen2(msg);i++) {
-        printf("msgrcv[%d]= %d - %c\r\n", i, msg[i], msg[i]);
+        printf("unpack_msg(): msgrcv[%d]= %d - %c\r\n", i, msg[i], msg[i]);
 
         if (found_startCHR){
             if (validated_addr_from && validated_addr_to && extracted_cmd_len && extracted_param_len && (k==cmd_len) && (j==param_len) && CRC_extracted){
@@ -200,7 +210,7 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
                     result=1;
                     return result;
                 } else {
-                    printf("CRC has been CORRECTLY evaluated (%d)! \r\n",received_CRC);
+                    printf("unpack_msg(): CRC has been CORRECTLY evaluated (%d)! \r\n",received_CRC);
                 }
             }
 
@@ -219,23 +229,23 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
                 param_len=msg[i];
                 totale+=msg[i];
                 extracted_param_len=1;
-                printf("param_len=%d\r\n",param_len);
+                printf("unpack_msg(): param_len=%d\r\n",param_len);
             }
 
             if (validated_addr_from && validated_addr_to && !extracted_cmd_len){
                 cmd_len=msg[i];
                 totale+=msg[i];
                 extracted_cmd_len=1;
-                printf("cmd_len=%d\r\n",cmd_len);
+                printf("unpack_msg(): cmd_len=%d\r\n",cmd_len);
             }
 
             if((validated_addr_from) && (!validated_addr_to)){
                 if (msg[i]==allowed_addr_to){
                     validated_addr_to=1;
                     totale+=msg[i];
-                    printf("Valid addr_to found: %d\r\n", msg[i]);
+                    printf("unpack_msg(): Valid addr_to found: %d\r\n", msg[i]);
                 } else {
-                    printf("message was addressed to other station: %d\r\n", msg[i]);
+                    printf("unpack_msg(): message was addressed to other station: %d\r\n", msg[i]);
                     result = 3;
                     return result;            
                 }
@@ -245,9 +255,9 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
                 if (msg[i]==allowed_addr_from){
                     validated_addr_from=1;
                     totale+=msg[i];
-                    printf("Valid addr_from found: %d\r\n", msg[i]);
+                    printf("unpack_msg(): Valid addr_from found: %d\r\n", msg[i]);
                 } else {
-                    printf("message was sent from not allowed station: %d\r\n", msg[i]);
+                    printf("unpack_msg(): message was sent from not allowed station: %d\r\n", msg[i]);
                     result = 2;
                     return result;
                 }  
@@ -257,7 +267,7 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
             found_startCHR=1;
         }
     } //for (int i)
-    printf("----END UNpack str----\r\n");
+    printf("unpack_msg(): ----END UNpack str----\r\n");
     return result;
 }
 
@@ -278,8 +288,9 @@ void foreverRed() {
 void presentBlink(unsigned char LedPinNo){
     for (unsigned char k=0; k<NUM_PRES_BLINKS; k++){
         gpio_set_level((gpio_num_t)LedPinNo, 1);
-        vTaskDelay(500 / portTICK_RATE_MS);
+        vTaskDelay(150 / portTICK_RATE_MS);
         gpio_set_level((gpio_num_t) LedPinNo, 0);
+        vTaskDelay(150 / portTICK_RATE_MS);
     }   
 }
 
@@ -333,7 +344,7 @@ bool writeHC12(uart_port_t uart_controller, int level) {
 
     success=false;
     for (int k=num_max_attempts;k>=0; k--){
-        scriviUART(uart_controller, pino);
+        scriviUART(uart_controller, (unsigned char*)pino);
         printf("writeHC12 printed %s on %d UART\n", pino, uart_controller);
         vTaskDelay(500 / portTICK_RATE_MS);
         line_read =read_line(uart_controller);
@@ -393,28 +404,75 @@ void setup(void){
     return;
 }
 
+unsigned char pp=0; //temporaty to be deleted
+
 void loop(void){
     unsigned char IN= gpio_get_level((gpio_num_t )GPIO_INPUT_COMMAND_PIN);
-    printf("value read: %d!\r\n",IN);
+    printf("loop(): value read: %d!\r\n",IN);
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN));
     vTaskDelay(50 / portTICK_RATE_MS);
-    // Read data from the UART1
-    unsigned char *line1;
-    line1 = read_line(UART_NUM_2);
-    //char *subline1=parse_line(line1,&parametri_globali,allowedCallers);
-    //char debugstr[150];
-    stampaStringa((char *) line1);
-    unsigned char allowed_addr_from=ADDR_MASTER_STATION;
-    unsigned char allowed_addr_to=ADDR_SLAVE_STATION; //in realta nell'utilizzo reale saranno da swappare ma per ora in fase di sviluppo codice mi viene comodo così (infatti saranno generati da una pack_msg che gira sulla slave station)
+    
     unsigned char* msg;
     unsigned char* cmd_received;
     unsigned char* param_received;
     
-    unsigned char ret=unpack_msg(line1, allowed_addr_from, allowed_addr_to, &cmd_received, &param_received);
-    printf("unpack returned with code: %d!\r\n",ret);
-    printf("cmd_received: %s\r\n",cmd_received);
-    printf("param_received: %s\r\n",param_received);
+    printf("loop(): Ciao!!!!!\r\n");
+    unsigned char  addr_from=ADDR_MASTER_STATION; //ADDR_MOBILE_STATION+5;
+    unsigned char  addr_to=ADDR_SLAVE_STATION; //ADDR_MOBILE_STATION;
+    unsigned char cmd_tosend[LINE_MAX]; //="abdcefgh1234567891";
+    unsigned char param_tosend[LINE_MAX]; //="ijklmnop0";
+    
+    memset(cmd_tosend,0,LINE_MAX);
+    memset(param_tosend,0,LINE_MAX);
+    
+    strcpy((char *)cmd_tosend,"abdcefgh1234567891");
+    pp=(pp+1)%9;
+    cmd_tosend[strlen2(cmd_tosend)]=pp+48;
 
+    strcpy((char *)param_tosend,"ijklmnop0");
+    
+    printf("loop():cmd: %s\r\n",cmd_tosend);
+    printf("loop():param: %s\r\n",param_tosend);
+    
+    msg=pack_msg(1, addr_from, addr_to, cmd_tosend, param_tosend);
+    //msg[strlen(msg)-1]=33;
+    printf("loop(): ***************end:%d\r\n",msg[strlen2(msg)-1]);
+    msg[strlen2(msg)]='E';
+    msg[strlen2(msg)]='N';
+    msg[strlen2(msg)]='D';
+    for (int i=0; i<strlen2(msg);i++){
+        printf("loop(): packed_msg[%d]= %d - %x - %c\r\n", i, msg[i], msg[i], msg[i]);
+    }
+
+    //sending msg on UART2
+    int numbytes=scriviUART(UART_NUM_2, msg);
+    if (numbytes<0){
+        printf("loop(): Fatal error in sending data on UART\r\n");
+        vTaskDelay(5000 / portTICK_RATE_MS);
+        return;
+    } else {
+        printf("loop(): sent %d bytes on UART_NUM_2\r\n",numbytes);
+        //vTaskDelay(170 / portTICK_RATE_MS);
+        presentBlink(BLINK_GPIO);
+    }
+
+    // Read data from the UART2 (the only used UART)
+    unsigned char *line1;
+    line1 = read_line(UART_NUM_2);
+    //char *subline1=parse_line(line1,&parametri_globali,allowedCallers);
+    //char debugstr[150];
+    printf("line read from UART: ");
+    stampaStringa((char *) line1);
+    
+    unsigned char allowed_addr_from=ADDR_MASTER_STATION;
+    unsigned char allowed_addr_to=ADDR_SLAVE_STATION; //in realta nell'utilizzo reale saranno da swappare ma per ora in fase di sviluppo codice mi viene comodo così (infatti saranno generati da una pack_msg che gira sulla slave station)
+
+    unsigned char ret=unpack_msg(line1, allowed_addr_from, allowed_addr_to, &cmd_received, &param_received);
+    printf("loop():unpack returned with code: %d!\r\n",ret);
+    printf("loop():cmd_received: %s\r\n",cmd_received);
+    printf("loop():param_received: %s\r\n",param_received);
+
+    vTaskDelay(2000 / portTICK_RATE_MS);
     return;
 
     /*if (command_valid){

@@ -64,6 +64,16 @@ unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, 
         }
         printf("*");
         printf("\r\n");
+        for(int i=0 ; i<strlen(msg_to_send); i++){
+        printf("*%x",msg_to_send[i]);
+        }
+        printf("*");
+        printf("\r\n");
+        for(int i=0 ; i<strlen(msg_to_send); i++){
+        printf("*%c",msg_to_send[i]);
+        }
+        printf("*");
+        printf("\r\n");
     }
 
     return msg_to_send;
@@ -224,7 +234,7 @@ int main(void){
     printf("Ciao!!!!!\r\n");
     unsigned char  addr_from=ADDR_MASTER_STATION;
     unsigned char  addr_to=ADDR_SLAVE_STATION;
-    unsigned char* cmd_tosend="abdcefgh";
+    unsigned char* cmd_tosend="abdcefgh1234567891";
     unsigned char* param_tosend="ijklmnop0";
     unsigned char* msg;
     unsigned char* cmd_received;
@@ -240,7 +250,7 @@ int main(void){
     msg[strlen(msg)]='N';
     msg[strlen(msg)]='D';
     for (int i=0; i<strlen(msg);i++){
-        printf("msg[%d]= %d - %c\r\n", i, msg[i], msg[i]);
+        printf("msg[%d]= %d - %x - %c\r\n", i, msg[i], msg[i], msg[i]);
     }
     
 
