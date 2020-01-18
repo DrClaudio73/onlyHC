@@ -8,7 +8,7 @@ int scriviUART(uart_port_t uart_controller, unsigned char* text){
 
 // read a line from the UART controller
 unsigned char* read_line(uart_port_t uart_controller) {
-    static unsigned char line[2048];
+    static unsigned char line[LINE_MAX];
     unsigned char *ptr = line;
     //printf("\nread_line on UART: %d\n", (int) uart_controller);
     while(1) {

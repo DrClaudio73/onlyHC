@@ -5,6 +5,7 @@
 #include "driver/uart.h"
 #endif
 
+#define LINE_MAX 2400
 //print on specified UART a text
 //void scriviUART(uart_port_t uart_controller, char* text);
 int scriviUART(uart_port_t uart_controller, unsigned char* text);

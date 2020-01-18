@@ -61,12 +61,6 @@ config CH_NO_HC12
 	help
 		Channel Number HC12 to exhcange data with slave station.
 
-config NUM_PRES_BLINKS
-    int "Number of presentation blinks"
-	default 3
-	help
-		Number of blinks at start_up.
-
 choice TRANSPARENTMODEBAUDHC12
 		prompt "Baud rate in transparent mode to remote station"
 		default BAUDTRANS2400
@@ -89,5 +83,52 @@ choice TRANSPARENTMODEBAUDHC12
 		config BAUDTRANS115200
 			bool "115200"
 endchoice
+
+choice STATION_ROLE
+		prompt "Role of this station"
+		default ROLEMASTER
+		help
+			Select the role of this station among MASTER, SLAVE, MOBILE
+		config ROLEMASTER
+			bool "MASTER"
+		config ROLESLAVE
+			bool "SLAVE"
+		config ROLEMOBILE
+			bool "MOBILE"
+endchoice
+
+config ADDR_MASTER_STATION
+    int "Address of Master Station"
+	range 0 255
+	default 1
+	help
+		Address of Master Station
+
+config ADDR_SLAVE_STATION
+    int "Address of Slave Station"
+	range 0 255
+	default 2
+	help
+		Address of Slave Station
+
+config ADDR_MOBILE_STATION
+    int "Address of Mobile Station"
+	range 0 255
+	default 3
+	help
+		Address of Mobile Station
+
+config NUM_PRES_BLINKS
+    int "Number of presentation blinks"
+	default 3
+	help
+		Number of blinks at start_up.
+
+config MIODEBUG
+    int "Debug Mode Active (1) Not Active (0)"
+	range 0 1
+	default 0
+	help
+		Activate a more verbose output
 
 endmenu
