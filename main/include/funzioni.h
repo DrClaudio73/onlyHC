@@ -10,15 +10,15 @@
 
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 #ifdef CONFIG_ROLEMASTER
-    #define STATION_ROLE 0
+    #define STATION_ROLE STATIONMASTER
 #endif
 
 #ifdef CONFIG_ROLESLAVE
-    #define STATION_ROLE 1
+    #define STATION_ROLE STATIONSLAVE
 #endif
 
 #ifdef CONFIG_ROLEMOBILE
-    #define STATION_ROLE 2
+    #define STATION_ROLE STATIONMOBILE
 #endif
 
 #define DR_REG_RNG_BASE 0x3ff75144
@@ -89,6 +89,6 @@ void pack_str(unsigned char* msg_to_send, const unsigned char* valore, unsigned 
 void pack_num(unsigned char* msg_to_send, unsigned char valore, unsigned char* k, int* totale);
 
 //unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param);
-unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
+unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
 
 unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_from, unsigned char allowed_addr_to, unsigned char** cmd, unsigned char** param, unsigned char* acknowldged_rep_counts);
