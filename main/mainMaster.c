@@ -35,18 +35,47 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 #include "funzioni.h"
 #include "manageUART.h"
 static char tag[] = "masterOnlyHC12";
-char command[LINE_MAX];
+//char command[LINE_MAX];
 
-int kkk=0;
-int ledus=0;
-
-unsigned char pp=0; //temporaty to be deleted
+////////////////////////////////////////////// VARIABLES //////////////////////////////////////////////
 unsigned char ok=0;
 unsigned char ko=0;
+//unsigned char num_retries_cmds_forwarded=0;
+//unsigned char num_retries_cmds_frominput=0;
+//unsigned char  waiting_for_cmdinputack[MAX_CMD_INPUT_TOMANAGE];
+//unsigned char  waiting_for_cmdforwardedack[MAX_CMD_FORWARDED_TOMANAGE];
 
+#define NUM_MAX_CMDS 20
+#define NUM_MAX_CHECKS_FOR_ACK 5 //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
+
+command_status commands_status[NUM_MAX_CMDS];
+unsigned char num_cmd_under_processing=0;
+
+////////////////////////////////////// FUNCTIONS FOR TYPE CONVERSION ////////////////////////////////////
 size_t strlen2(const unsigned char* stringa){
     return(strlen((const char*) stringa));
 }
+
+unsigned char* strcpy2(unsigned char* dst , const unsigned char* src){
+    return((unsigned char*) strcpy((char*) dst, (const char*) src));
+}
+
+int strcmp2(const unsigned char* first, const unsigned char* second){
+    return (strcmp((const char*) first, (const char*) second));
+}
+
+unsigned char* strcat2(unsigned char * destination, const unsigned char * source){
+    return (unsigned char*)strcat((char*) destination, (const char*) source);
+}
+
+int strcmpACK(const unsigned char* rcv, const unsigned char* cmd){ //the rcv should match "ACK_"+cmd to be a valid ACK
+    unsigned char expected_ACK[FIELD_MAX];
+    strcpy2(expected_ACK,(const unsigned char*) "ACK_");
+    strcat2(expected_ACK,cmd);
+    return (strcmp2(rcv, expected_ACK));
+}
+////////////////////////////////////////////// FUNCTIONS //////////////////////////////////////////////
+
 unsigned char calcola_CRC(int totale) {
     return((unsigned char) totale%256);
 }
@@ -76,17 +105,21 @@ void pack_num(unsigned char* msg_to_send, unsigned char valore, unsigned char* k
 unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts) {
     static unsigned char msg_to_send[LINE_MAX];
 
-    //unsigned char expectedACK[255];
-    //unsigned char num_max_attempts=5;
-    //unsigned char *line_read;
-    //short success;
-
     memset(msg_to_send,0,255);
 
     //Frame structure
     //CMD: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
     //ANSWER: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+ACKNOWLEDGED_REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
     //CRC is evaluated starting at ADDDR_FROM up to PARAM
+    
+    //SUPPORTED CMDs:
+    //---APRI+PARAM=XXXX
+    //---REPORT+PARAM=SPECIFIC to be implemented 
+    //---REPORT+PARAM=ALL      to be implemented
+    //SUPPORTED REPLIES:
+    //---ACK_APRI+RCV_PARAM+RCV_REP_COUNTS
+    //---REPORT+PARAM=SPECIFIC  to be implemented
+    //---ACK_REPORT+PARAM=ALL   to be implemented, in this case an handshake to trasnfer N items in transaction should be implemented
 
     //build message
     int totale = 0;
@@ -160,9 +193,6 @@ unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const un
 
 
 unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_from, unsigned char allowed_addr_to, unsigned char** cmd, unsigned char** param, unsigned char* acknowldged_rep_counts){
-    //CMD: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
-    //ANSWER: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+ACKNOWLEDGED_REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
-    //CRC is evaluated starting at ADDDR_FROM up to PARAM
     // RETCODES
     // 0 = OK
     // 1 = INVALID CRC
@@ -194,6 +224,8 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
     unsigned char j=0;
     unsigned char CRC_extracted=0;
     int totale=0;
+
+    printf("unpack_msg(): processing msg= %s\r\n", msg);
 
     for (unsigned char i=0; i<strlen2(msg);i++) {
         //printf("unpack_msg(): msgrcv[%d]= %d - %c\r\n", i, msg[i], msg[i]);
@@ -283,7 +315,6 @@ unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_fr
     //printf("unpack_msg(): ----END UNpack str----\r\n");
     return result;
 }
-
 
 void foreverRed() {
     int k=0;
@@ -387,7 +418,7 @@ void setup(void){
     /* Set the GPIO as a push/pull output */
     gpio_set_direction((gpio_num_t)BLINK_GPIO, GPIO_MODE_OUTPUT);
     gpio_set_level((gpio_num_t)BLINK_GPIO, 1); //switch the led OFF
-    ESP_LOGW(TAG,"Set up presentation led ended\r\n");
+    ESP_LOGW(TAG,"Set up presentation led ended");
 
     /* CONFIGURING COMMAND INPUT */
     gpio_config_t io_conf;
@@ -403,35 +434,28 @@ void setup(void){
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
-    ESP_LOGW(TAG,"Set up command input ended\r\n");
+    ESP_LOGW(TAG,"Set up command input ended");
 
     //Initializing Radio HC12
     setupmyRadioHC12();
-    ESP_LOGW(TAG,"Set up HC12 Radio ended\r\n");
+    ESP_LOGW(TAG,"Set up HC12 Radio ended");
 
     //presentation blinking
     presentBlink(BLINK_GPIO);
-    ESP_LOGW(TAG,"Set up things ended\r\n");
-    ESP_LOGW(TAG,"==============================\r\n");
+    ESP_LOGW(TAG,"Set up things ended");
+    ESP_LOGW(TAG,"==============================");
+
+    //Initializing DB
+    for (unsigned char i=0; i<NUM_MAX_CMDS ; i++){
+        memset(commands_status[i].cmd,0,sizeof(commands_status[i].cmd));
+        memset(commands_status[i].param,0,sizeof(commands_status[i].param));
+        commands_status[i].rep_counts=0;
+        commands_status[i].num_checks=0;
+        commands_status[i].addr_to=0xFF;
+    }
 
     return;
 }
-
-enum typeOfevent {NOTHING=0, IO_INPUT_ACTIVE=1, RECEIVED_MSG = 2};
-
-typedef struct Valore_Evento_t
-{
-    unsigned char status;
-    unsigned char* cmd_received;
-    unsigned char* param_received;
-    unsigned char ack_rep_counts;
-} valore_evento_t; 
-
-typedef struct Evento
-{
-    enum typeOfevent id_evento;
-    valore_evento_t valore_evento;
-} evento;
 
 evento* detectEvent(unsigned char uart_controller){
     static evento detected_event;
@@ -441,146 +465,259 @@ evento* detectEvent(unsigned char uart_controller){
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN));
     //Reset event variable
     detected_event.id_evento = NOTHING;
-    detected_event.valore_evento.status = 0;
+    detected_event.valore_evento.value_of_input = 0;
     detected_event.valore_evento.cmd_received=0;
     detected_event.valore_evento.param_received=0;
     detected_event.valore_evento.ack_rep_counts=0;
-
+    detected_event.valore_evento.sender=0;
+    
     //Detect if IO_INPUT went low 
     printf("detectEvent(): IN: %u ; IN_PREC: %u\r\n",IN,IN_PREC);
     if (!(IN ==IN_PREC)){
         detected_event.id_evento = IO_INPUT_ACTIVE;
         printf("detectEvent(): !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Event Occurred!!!!!!!\r\n");
-        detected_event.valore_evento.status = IN;
+        detected_event.valore_evento.value_of_input = IN;
         detected_event.valore_evento.cmd_received=0;
         detected_event.valore_evento.param_received=0;
         detected_event.valore_evento.ack_rep_counts=0;
+        detected_event.valore_evento.sender=0; //myself
         IN_PREC=IN;
         return &detected_event;
     }
     IN_PREC=IN;
 
     //Detect if a message has been received from any station 
-    // Read data from the UART2 (the only used UART)
-    unsigned char *line1;
-    line1 = read_line(UART_NUM_2);
-    //char *subline1=parse_line(line1,&parametri_globali,allowedCallers);
-    printf("detect_event(): line read from UART: ");
-    stampaStringa((char *) line1);
-    printf("\r\ndetect_event(): Parsing line read!\r\n ");
-    unsigned char allowed_addr_from;
-    unsigned char allowed_addr_to;
+    //Read data from the UART2 (the only used UART)
+    unsigned char station_iter=0;
+    while (station_iter<2){
+        unsigned char *line1;
+        line1 = read_line(uart_controller);
+        //char *subline1=parse_line(line1,&parametri_globali,allowedCallers);
+        printf("detect_event(): station iter: %u - line read from UART%u: ", station_iter,uart_controller);
+        stampaStringa((char *) line1);
+        printf("\r\ndetect_event(): Parsing line read!\r\n ");
+        unsigned char allowed_addr_from;
+        unsigned char allowed_addr_to;
 
-    printf("\r\ndetect_event(): Parsing line read!\r\n ");
-    if (STATION_ROLE==STATIONMASTER){
-        allowed_addr_from=ADDR_MASTER_STATION;
-        allowed_addr_to=ADDR_SLAVE_STATION; //in realta nell'utilizzo reale saranno da swappare ma per ora in fase di sviluppo codice mi viene comodo così (infatti saranno generati da una pack_msg che gira sulla slave station)
-    }
-    if (STATION_ROLE==STATIONSLAVE){
-        allowed_addr_from=ADDR_MASTER_STATION;
-        allowed_addr_to=ADDR_SLAVE_STATION; 
-    }
-    if (STATION_ROLE==STATIONMOBILE){
-        allowed_addr_from=ADDR_MASTER_STATION;
-        allowed_addr_to=ADDR_MOBILE_STATION; 
-    }
+        if (station_iter==0){
+            //First I try with one of the other 2 actors 
+            if (STATION_ROLE==STATIONMASTER){
+                allowed_addr_from=ADDR_SLAVE_STATION;
+                allowed_addr_to=ADDR_MASTER_STATION; 
+            }
+            if (STATION_ROLE==STATIONSLAVE){
+                allowed_addr_from=ADDR_MASTER_STATION;
+                allowed_addr_to=ADDR_SLAVE_STATION; 
+            }
+            if (STATION_ROLE==STATIONMOBILE){
+                allowed_addr_from=ADDR_MASTER_STATION;
+                allowed_addr_to=ADDR_MOBILE_STATION; 
+            }
+        } else {
+            //Then I try with the other of the other 2 actors 
+            if (STATION_ROLE==STATIONMASTER){
+                allowed_addr_from=ADDR_MOBILE_STATION;
+                allowed_addr_to=ADDR_MASTER_STATION; 
+            }
+            if (STATION_ROLE==STATIONSLAVE){
+                allowed_addr_from=ADDR_MOBILE_STATION;
+                allowed_addr_to=ADDR_SLAVE_STATION; 
+            }
+            if (STATION_ROLE==STATIONMOBILE){
+                allowed_addr_from=ADDR_SLAVE_STATION;
+                allowed_addr_to=ADDR_MOBILE_STATION; 
+            }
+        }
 
-    unsigned char* cmd_received;
-    unsigned char* param_received;
-    unsigned char ack_rep_counts=0;
+        unsigned char* cmd_received;
+        unsigned char* param_received;
+        unsigned char ack_rep_counts=0;
+        
+        unsigned char ret=unpack_msg(line1, allowed_addr_from, allowed_addr_to, &cmd_received, &param_received, &ack_rep_counts);
+        printf("\ndetect_event(): unpack returned with code: %d!\r\n",ret);
+        printf("detect_event(): cmd_received: %s\r\n",cmd_received);
+        printf("detect_event(): param_received: %s\r\n",param_received);
+        printf("detect_event(): ack_rep_counts: %d\r\n",ack_rep_counts);
+
+        if (ret==0) {
+            ok++;
+            detected_event.id_evento = RECEIVED_MSG;
+            printf("detectEvent(): !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!A message of interest has been detected!!!!!!!\r\n");
+            detected_event.valore_evento.value_of_input = 0;
+            detected_event.valore_evento.cmd_received=cmd_received;
+            detected_event.valore_evento.param_received=param_received;
+            detected_event.valore_evento.ack_rep_counts=ack_rep_counts;
+            detected_event.valore_evento.sender=allowed_addr_from; //the actual sender
+            return &detected_event;
+        } else {
+            printf("detectEvent(): message was not of interest. RetCode=%u\r\n",ret);
+            ko++;
+        }
+        printf("detect_event(): ok: % d -- ko: %u\r\n",ok,ko);
+        station_iter++;
+    }
     
-    unsigned char ret=unpack_msg(line1, allowed_addr_from, allowed_addr_to, &cmd_received, &param_received, &ack_rep_counts);
-    printf("detect_event(): unpack returned with code: %d!\r\n",ret);
-    printf("detect_event(): cmd_received: %s\r\n",cmd_received);
-    printf("detect_event(): param_received: %s\r\n",param_received);
-    printf("detect_event(): ack_rep_counts: %d\r\n",ack_rep_counts);
-
-    if (ret==0) {
-        ok++;
-        detected_event.id_evento = RECEIVED_MSG;
-        printf("detectEvent(): !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!A message of interest has been detected!!!!!!!\r\n");
-        detected_event.valore_evento.status = 0;
-        detected_event.valore_evento.cmd_received=cmd_received;
-        detected_event.valore_evento.param_received=param_received;
-        detected_event.valore_evento.ack_rep_counts=ack_rep_counts;
-        return &detected_event;
-    } else
-    {
-        printf("message was not of interest. RetCode=%u\r\n",ret);
-        ko++;
-    }
-    printf("detect_event(): ok: % d -- ko: %u\r\n",ok,ko);
     return &detected_event;
 }
 
-unsigned char  waiting_for_ack=0;
+unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
+    unsigned char* msg;
+
+    printf("invia_messaggio():uart_controller: %u\r\n",uart_controller);
+    printf("invia_messaggio():addr_from: %u\r\n",addr_from);
+    printf("invia_messaggio():addr_to: %u\r\n",addr_to);
+    printf("invia_messaggio():cmd_tosend: %s\r\n",cmd);
+    printf("invia_messaggio():param_tosend: %s\r\n",param);
+    printf("invia_messaggio():rep_counts: %u\r\n",rep_counts);
+    
+    msg=pack_msg(addr_from, addr_to, cmd, param, rep_counts);
+    printf("invia_messaggio(): msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
+    //printf("loop(): ***************end:%d\r\n",msg[strlen2(msg)-1]);
+    msg[strlen2(msg)]='E';
+    msg[strlen2(msg)]='N';
+    msg[strlen2(msg)]='D';
+    
+    //sending msg on UART2
+    printf("invia_messaggio(): msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
+    int numbytes=scriviUART(uart_controller, msg);
+    
+    if (numbytes<0){
+        printf("invia_messaggio(): Fatal error in sending data on UART%u\r\n",uart_controller);
+        vTaskDelay(5000 / portTICK_RATE_MS);
+        return -1;
+    } else {
+        printf("invia_messaggio(): sent %d bytes on UART_NUM_%u\r\n",numbytes,uart_controller);
+        vTaskDelay(500 / portTICK_RATE_MS);
+        presentBlink(BLINK_GPIO);
+    }
+
+    strcpy2(commands_status[num_cmd_under_processing].cmd, cmd);
+    strcpy2(commands_status[num_cmd_under_processing].param,param);
+    commands_status[num_cmd_under_processing].rep_counts=1; 
+    commands_status[num_cmd_under_processing].num_checks=0; 
+    commands_status[num_cmd_under_processing].addr_to=addr_to;
+    num_cmd_under_processing++;
+
+    return 0;
+}
+
+void clean_acknowledged_cmds(void){
+//clean commands_status array from empty cells
+    unsigned char i=0;
+    while (i<num_cmd_under_processing){
+        if (commands_status[i].addr_to == 0xFF){ //this command has been previsously acknowledeged: so it has to be removed
+            unsigned char j=i;
+            while (j<num_cmd_under_processing-1){
+                strcpy2(commands_status[j].cmd,commands_status[j+1].cmd);
+                strcpy2(commands_status[j].param,commands_status[j+1].param);
+                commands_status[j].rep_counts=commands_status[j+1].rep_counts;
+                commands_status[j].num_checks=commands_status[j+1].num_checks;
+                commands_status[j].addr_to=commands_status[j+1].addr_to;
+                j++;
+            }
+            num_cmd_under_processing--;
+            memset(commands_status[i].cmd,0,sizeof(commands_status[i].cmd));
+            memset(commands_status[i].param,0,sizeof(commands_status[i].param));
+            commands_status[num_cmd_under_processing].rep_counts=0;
+            commands_status[num_cmd_under_processing].num_checks=0;
+            commands_status[num_cmd_under_processing].addr_to=0xFF;
+        }
+        i++;
+    }
+}
+
+void check_rcv_acks(evento* detected_event){
+    printf("check_rcv_acks():BEGIN\r\n");
+    if (detected_event->id_evento == RECEIVED_MSG){
+        unsigned char i=0;
+        printf("check_rcv_acks():detected_event->id_evento == RECEIVED_MSG\r\n");
+        //check if current event is an ACK
+        i=0;
+        while (i<num_cmd_under_processing){
+            printf("check_rcv_acks():i=%u\r\n",i);
+            printf("check_rcv_acks():detected_event->valore_evento.cmd_received=%s\r\n",detected_event->valore_evento.cmd_received);
+            printf("check_rcv_acks():commands_status[i].cmd=%s\r\n",commands_status[i].cmd);
+            printf("check_rcv_acks():detected_event->valore_evento.param_received=%s\r\n",detected_event->valore_evento.param_received);
+            printf("check_rcv_acks():commands_status[i].param=%s\r\n",commands_status[i].param);
+            printf("check_rcv_acks():detected_event->valore_evento.ack_rep_counts=%u\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("check_rcv_acks():commands_status[i].rep_counts=%u\r\n",commands_status[i].rep_counts);
+            printf("check_rcv_acks():detected_event->valore_evento.sender=%u\r\n",detected_event->valore_evento.sender);
+            printf("check_rcv_acks():commands_status[i].addr_to=%u\r\n",commands_status[i].addr_to);
+            
+            if((strcmpACK(detected_event->valore_evento.cmd_received,commands_status[i].cmd)==0)&&
+                (strcmp2(detected_event->valore_evento.param_received,commands_status[i].param)==0)&&
+                (detected_event->valore_evento.ack_rep_counts==commands_status[i].rep_counts)&&
+                (detected_event->valore_evento.sender==commands_status[i].addr_to)
+                ){ //DA METTERE IN AND CON IL CJHECK SU PARAM E REP_COUNTS
+                    printf("check_rcv_acks(): CMD NUMBER %u HAS BEEN ACKNOWLEDGED!!!!!!!!\n",i);       
+                    commands_status[i].addr_to=0xFF;
+            }
+            i++;
+        }
+    } 
+    return;
+}
+            
 
 void loop(void){
     evento* detected_event;
 
+
     unsigned char cmd_tosend[FIELD_MAX]; //="abdcefgh1234567891";
     unsigned char param_tosend[FIELD_MAX]; //="ijklmnop0";
-    unsigned char* msg;
-    memset(cmd_tosend,0,FIELD_MAX);
-    memset(param_tosend,0,FIELD_MAX);
+    memset(cmd_tosend,0,sizeof(cmd_tosend));
+    memset(param_tosend,0,sizeof(param_tosend));
     unsigned char  addr_from;
     unsigned char  addr_to;
 
-    printf("loop(): Ciao!!!!! ");
+    printf("loop(): *******************************************\r\n");
+    printf("loop(): Ciao!!!!! \n");
+
+    for(int l=0;l<num_cmd_under_processing;l++){
+        printf("loop(): commands_status[%u].cmd: %s\r\n",l,commands_status[l].cmd);
+        printf("loop(): commands_status[%u].prm: %s\r\n",l,commands_status[l].param);
+        printf("loop(): commands_status[%u].rep_counts: %u\r\n",l,commands_status[l].rep_counts);
+        printf("loop(): commands_status[%u].num_checks: %u\r\n",l,commands_status[l].num_checks);
+        printf("loop(): commands_status[%u].addr_to: %u\r\n",l,commands_status[l].addr_to);
+    }
 
     //Listening for any event to occour
     detected_event=detectEvent(UART_NUM_2);
-
+    clean_acknowledged_cmds();
+    
     if (STATION_ROLE==STATIONMASTER){ //BEHAVE AS MASTER STATION
-        printf("This is the Master station\n");
+        addr_from=ADDR_MASTER_STATION; //ADDR_MOBILE_STATION+5;
+        printf("\n######################This is the Master station######################\n");
 
         if (detected_event->id_evento == IO_INPUT_ACTIVE) { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
-            if (detected_event->valore_evento.status==1){ // NOTHING TO DO: 
+            if (detected_event->valore_evento.value_of_input==1){ // NOTHING TO DO: 
                 printf("\r\n\r\n\r\n\r\n\r\n\r\nEVENTO SU I_O PIN GESTITO CORRETTAMENTE!!!!!\r\n");
                 return;
             } else { //SENDING COMMAND TO OPEN
-                addr_from=ADDR_MASTER_STATION; //ADDR_MOBILE_STATION+5;
+                //num_retries_cmds_frominput=0;
                 addr_to=ADDR_SLAVE_STATION; //ADDR_MOBILE_STATION;
                 strcpy((char *)cmd_tosend,"APRI");
                 strcpy((char *)param_tosend,"0");
-                printf("loop():cmd_tosend: %s\r\n",cmd_tosend);
-                printf("loop():param_tosend: %s\r\n",param_tosend);
-                unsigned char rep_counts=++pp;
-                msg=pack_msg(addr_from, addr_to, cmd_tosend, param_tosend, rep_counts);
-                //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
-                //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
-                //printf("loop(): ***************end:%d\r\n",msg[strlen2(msg)-1]);
-                msg[strlen2(msg)]='E';
-                msg[strlen2(msg)]='N';
-                msg[strlen2(msg)]='D';
-                //sending msg on UART2
-                printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
-                int numbytes=scriviUART(UART_NUM_2, msg);
-                if (numbytes<0){
-                    printf("loop(): Fatal error in sending data on UART\r\n");
-                    vTaskDelay(5000 / portTICK_RATE_MS);
-                    return;
-                } else {
-                    printf("loop(): sent %d bytes on UART_NUM_2\r\n",numbytes);
-                    vTaskDelay(500 / portTICK_RATE_MS);
-                    presentBlink(BLINK_GPIO);
-                }
-                waiting_for_ack=1;
+                invia_comando(UART_NUM_2, addr_from, addr_to, cmd_tosend, param_tosend, 1);
             }
         } else if (detected_event->id_evento == RECEIVED_MSG) { 
-            printf("loop(): This was the msg for me:\r\n");
+            ESP_LOGW(TAG,"loop(): This was the msg for me:\r\n");
             printf("loop():cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():param_received: %s\r\n",detected_event->valore_evento.param_received);
             printf("loop():ack_rep_counts: %d\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("loop():sender: %d\r\n",detected_event->valore_evento.sender);
 
-            if (waiting_for_ack==1){
+            check_rcv_acks(detected_event);
+
+            /*
+            if (waiting_for_cmdinputack==1){
                 printf("loop(): I was waiting for an ACK so I should do something\r\n");
-                /* code */
+                // code 
             } else
             {
                 printf("loop(): I received a valid message from mobile station that I should forward to slave station\r\n");
-                /* code */
-            } 
+                // code 
+            } */
         } else {
             vTaskDelay(500/portTICK_RATE_MS);
             return;
@@ -588,21 +725,27 @@ void loop(void){
     } //if (STATION_ROLE==STATIONMASTER)
 
     if (STATION_ROLE==STATIONSLAVE){ //BEHAVE AS SLAVE STATION
-        printf("This is the Slave station\n");
+        addr_from=ADDR_SLAVE_STATION;
+        printf("\nn######################This is the Slave station######################\n");
         if (detected_event->id_evento == RECEIVED_MSG) { 
-            printf("loop(): This was the msg for me:\r\n");
+            ESP_LOGW(TAG,"loop(): This was the msg for me:\r\n");
             printf("loop():cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():param_received: %s\r\n",detected_event->valore_evento.param_received);
-            printf("loop():ack_rep_counts: %d\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("loop():ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("loop():sender: %u\r\n",detected_event->valore_evento.sender);
+            strcpy((char *)cmd_tosend,"ACK_APRI");
+            //strcpy((char *)param_tosend,"0");
+            invia_comando(UART_NUM_2, addr_from, detected_event->valore_evento.sender, cmd_tosend, detected_event->valore_evento.param_received,
+             detected_event->valore_evento.ack_rep_counts);
 
-            if (waiting_for_ack==1){
+            /*if (waiting_for_ack==1){
                 printf("loop(): I was waiting for an ACK (?!?!?!?) so I should do something\r\n");
-                /* code */
+                // code 
             } else
             {
-                printf("loop(): I received a valid COMMAND (open, close, sendreport) from MASTER  OR MOBILE station that I should satisfy\r\n");
-                /* code */
-            } 
+                printf("loop(): I received a valid COMMAND (open, close, sendreport) from MASTER OR MOBILE station that I should satisfy\r\n");
+                // code 
+            } */
         } else {
             vTaskDelay(500/portTICK_RATE_MS);
             return;
@@ -610,13 +753,14 @@ void loop(void){
     } //if (STATION_ROLE==STATIONSLAVE)
 
     if (STATION_ROLE==STATIONMOBILE){ //BEHAVE AS MOBILE STATION
-        printf("This is the Mobile station\n");
+        addr_from=ADDR_MOBILE_STATION;
+        printf("n######################This is the Mobile station######################\n");
         if (detected_event->id_evento == IO_INPUT_ACTIVE) { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
-            if (detected_event->valore_evento.status==1){ // NOTHING TO DO: 
+            if (detected_event->valore_evento.value_of_input==1){ // NOTHING TO DO: 
                 printf("\r\n\r\n\r\n\r\n\r\n\r\nEVENTO SU I_O PIN GESTITO CORRETTAMENTE!!!!!\r\n");
                 return;
             } else { //SENDING COMMAND TO OPEN
-                addr_from=ADDR_MASTER_STATION; //ADDR_MOBILE_STATION+5;
+                addr_from=ADDR_MOBILE_STATION;
                 addr_to=ADDR_SLAVE_STATION; //ADDR_MOBILE_STATION;
                 strcpy((char *)cmd_tosend,"APRI");
                 strcpy((char *)param_tosend,"0");
@@ -625,7 +769,7 @@ void loop(void){
                 //def nuova func: send_msg(UART_NUM_2, addr_from, addr_to,cmd_tosend, param_tosend, rep_counts);
                 //uso nuova func: send_msg(UART_NUM_2, ADDR_MASTER_STATION, ADDR_SLAVE_STATION,"APRI", "0", rep_counts);
 
-                unsigned char rep_counts=++pp;
+                /*unsigned char rep_counts=0;//++pp;
                 msg=pack_msg(addr_from, addr_to, cmd_tosend, param_tosend, rep_counts);
                 //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
                 //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
@@ -645,29 +789,30 @@ void loop(void){
                     vTaskDelay(500 / portTICK_RATE_MS);
                     presentBlink(BLINK_GPIO);
                 }
-                waiting_for_ack=1;
+                waiting_for_cmdinputack=1;*/
             }
         } else if (detected_event->id_evento == RECEIVED_MSG) { 
             printf("loop(): This was the msg for me:\r\n");
             printf("loop():cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():param_received: %s\r\n",detected_event->valore_evento.param_received);
             printf("loop():ack_rep_counts: %d\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("loop():sender: %d\r\n",detected_event->valore_evento.sender);
 
-            if (waiting_for_ack==1){
+            /*if (waiting_for_ack==1){
                 printf("loop(): I was waiting for an ACK so I should do something\r\n");
-                /* code */
+                // code 
             } else
             {
                 printf("loop(): I received a valid message from ?!?!?! station that I should forward to ?!?!?!\r\n");
-                /* code */
-            } 
+                // code 
+            } */
         } else {
             vTaskDelay(500/portTICK_RATE_MS);
             return;
         }
     }  //if (STATION_ROLE==STATIONMOBILE)
 
-    return;
+    return; // OLD CODE FROM HERE BELOW
     /*unsigned char* tmp=cmd_tosend;
     for (int r=0; r<FIELD_MAX-10 ; r++){
         uint32_t randomNumber = READ_PERI_REG(DR_REG_RNG_BASE);
@@ -688,8 +833,8 @@ void loop(void){
     //strcpy((char *)param_tosend,"ijklmnop0");
     printf("loop():cmd_tosend: %s\r\n",cmd_tosend);
     printf("loop():param_tosend: %s\r\n",param_tosend);
-    unsigned char rep_counts=++pp;
-    msg=pack_msg(addr_from, addr_to, cmd_tosend, param_tosend, rep_counts);
+    unsigned char rep_counts=0;//++pp;
+    unsigned char* msg=pack_msg(addr_from, addr_to, cmd_tosend, param_tosend, rep_counts);
     //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
     //printf("msg: %s , msg_len: %u\r\n", msg, strlen2(msg));
     //printf("loop(): ***************end:%d\r\n",msg[strlen2(msg)-1]);
