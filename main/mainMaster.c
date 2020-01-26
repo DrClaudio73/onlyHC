@@ -591,6 +591,7 @@ unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from
         presentBlink(BLINK_GPIO);
     }
 
+    //inserting new command in commands_status to be tracked
     strcpy2(commands_status[num_cmd_under_processing].cmd, cmd);
     strcpy2(commands_status[num_cmd_under_processing].param,param);
     commands_status[num_cmd_under_processing].rep_counts=1; 
@@ -604,8 +605,23 @@ unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from
 void clean_acknowledged_cmds(void){
 //clean commands_status array from empty cells
     unsigned char i=0;
+    /////REPORT commands_status[] BEFORE processing
+    printf("clean_acknowledged_cmds(): BEFORE PROCESSING\r\n");
     while (i<num_cmd_under_processing){
+        printf("clean_acknowledged_cmds(): commands_status[%u].cmd: %s\r\n",i,commands_status[i].cmd);
+        printf("clean_acknowledged_cmds(): commands_status[%u].param: %s\r\n",i,commands_status[i].param);
+        printf("clean_acknowledged_cmds(): commands_status[%u].rep_counts: %u\r\n",i,commands_status[i].rep_counts);
+        printf("clean_acknowledged_cmds(): commands_status[%u].num_checks: %u\r\n",i,commands_status[i].num_checks);
+        printf("clean_acknowledged_cmds(): commands_status[%u].addr_to: %u\r\n",i,commands_status[i].addr_to);
+        i++;
+    }
+
+    /////processing commands_status[]
+    i=0;
+    while (i<num_cmd_under_processing){
+        printf("clean_acknowledged_cmds(): processing cmds no. %u\r\n",i);
         if (commands_status[i].addr_to == 0xFF){ //this command has been previsously acknowledeged: so it has to be removed
+            printf("clean_acknowledged_cmds(): cmds no. %u has been previously acknowledeged.....cleaning up\r\n",i);
             unsigned char j=i;
             while (j<num_cmd_under_processing-1){
                 strcpy2(commands_status[j].cmd,commands_status[j+1].cmd);
@@ -616,12 +632,26 @@ void clean_acknowledged_cmds(void){
                 j++;
             }
             num_cmd_under_processing--;
+            printf("num_cmd_under_processing: %u",num_cmd_under_processing);
             memset(commands_status[i].cmd,0,sizeof(commands_status[i].cmd));
             memset(commands_status[i].param,0,sizeof(commands_status[i].param));
             commands_status[num_cmd_under_processing].rep_counts=0;
             commands_status[num_cmd_under_processing].num_checks=0;
             commands_status[num_cmd_under_processing].addr_to=0xFF;
+            i=-1; //after having shifted one ack command restart scanning from the beginning
         }
+        i++;
+    }
+
+    /////REPORT commands_status[] AFTER processing
+    i=0;
+    printf("clean_acknowledged_cmds(): commands_status AFTER PROCESSING\r\n");
+    while (i<num_cmd_under_processing){
+        printf("clean_acknowledged_cmds(): commands_status[%u].cmd: %s\r\n",i,commands_status[i].cmd);
+        printf("clean_acknowledged_cmds(): commands_status[%u].param: %s\r\n",i,commands_status[i].param);
+        printf("clean_acknowledged_cmds(): commands_status[%u].rep_counts: %u\r\n",i,commands_status[i].rep_counts);
+        printf("clean_acknowledged_cmds(): commands_status[%u].num_checks: %u\r\n",i,commands_status[i].num_checks);
+        printf("clean_acknowledged_cmds(): commands_status[%u].addr_to: %u\r\n",i,commands_status[i].addr_to);
         i++;
     }
 }
@@ -636,35 +666,34 @@ void check_rcv_acks(evento* detected_event){
         while (i<num_cmd_under_processing){
             printf("check_rcv_acks():i=%u\r\n",i);
             printf("check_rcv_acks():detected_event->valore_evento.cmd_received=%s\r\n",detected_event->valore_evento.cmd_received);
-            printf("check_rcv_acks():commands_status[i].cmd=%s\r\n",commands_status[i].cmd);
+            printf("check_rcv_acks():commands_status[%u].cmd=%s\r\n",i,commands_status[i].cmd);
             printf("check_rcv_acks():detected_event->valore_evento.param_received=%s\r\n",detected_event->valore_evento.param_received);
-            printf("check_rcv_acks():commands_status[i].param=%s\r\n",commands_status[i].param);
+            printf("check_rcv_acks():commands_status[%u].param=%s\r\n",i,commands_status[i].param);
             printf("check_rcv_acks():detected_event->valore_evento.ack_rep_counts=%u\r\n",detected_event->valore_evento.ack_rep_counts);
-            printf("check_rcv_acks():commands_status[i].rep_counts=%u\r\n",commands_status[i].rep_counts);
+            printf("check_rcv_acks():commands_status[%u].rep_counts=%u\r\n",i,commands_status[i].rep_counts);
             printf("check_rcv_acks():detected_event->valore_evento.sender=%u\r\n",detected_event->valore_evento.sender);
-            printf("check_rcv_acks():commands_status[i].addr_to=%u\r\n",commands_status[i].addr_to);
+            printf("check_rcv_acks():commands_status[%u].addr_to=%u\r\n",i,commands_status[i].addr_to);
             
             if((strcmpACK(detected_event->valore_evento.cmd_received,commands_status[i].cmd)==0)&&
                 (strcmp2(detected_event->valore_evento.param_received,commands_status[i].param)==0)&&
                 (detected_event->valore_evento.ack_rep_counts==commands_status[i].rep_counts)&&
                 (detected_event->valore_evento.sender==commands_status[i].addr_to)
-                ){ //DA METTERE IN AND CON IL CJHECK SU PARAM E REP_COUNTS
+                ){
                     printf("check_rcv_acks(): CMD NUMBER %u HAS BEEN ACKNOWLEDGED!!!!!!!!\n",i);       
                     commands_status[i].addr_to=0xFF;
+                    return; //with this return only one command is acknowleded with a received ACK, without this return all the same cmd+param+rep_count+addr_to will be ackowledeged with one only ACK  
             }
             i++;
         }
     } 
     return;
 }
-            
 
 void loop(void){
     evento* detected_event;
 
-
-    unsigned char cmd_tosend[FIELD_MAX]; //="abdcefgh1234567891";
-    unsigned char param_tosend[FIELD_MAX]; //="ijklmnop0";
+    unsigned char cmd_tosend[FIELD_MAX];
+    unsigned char param_tosend[FIELD_MAX];
     memset(cmd_tosend,0,sizeof(cmd_tosend));
     memset(param_tosend,0,sizeof(param_tosend));
     unsigned char  addr_from;
@@ -673,7 +702,7 @@ void loop(void){
     printf("loop(): *******************************************\r\n");
     printf("loop(): Ciao!!!!! \n");
 
-    for(int l=0;l<num_cmd_under_processing;l++){
+    for(unsigned char l=0;l<num_cmd_under_processing;l++){
         printf("loop(): commands_status[%u].cmd: %s\r\n",l,commands_status[l].cmd);
         printf("loop(): commands_status[%u].prm: %s\r\n",l,commands_status[l].param);
         printf("loop(): commands_status[%u].rep_counts: %u\r\n",l,commands_status[l].rep_counts);
@@ -687,11 +716,11 @@ void loop(void){
     
     if (STATION_ROLE==STATIONMASTER){ //BEHAVE AS MASTER STATION
         addr_from=ADDR_MASTER_STATION; //ADDR_MOBILE_STATION+5;
-        printf("\n######################This is the Master station######################\n");
+        printf("\nloop(): ######################This is the Master station######################\n");
 
         if (detected_event->id_evento == IO_INPUT_ACTIVE) { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
             if (detected_event->valore_evento.value_of_input==1){ // NOTHING TO DO: 
-                printf("\r\n\r\n\r\n\r\n\r\n\r\nEVENTO SU I_O PIN GESTITO CORRETTAMENTE!!!!!\r\n");
+                printf("\r\nloop(): EVENTO SU I_O PIN GESTITO CORRETTAMENTE!!!!!\r\n");
                 return;
             } else { //SENDING COMMAND TO OPEN
                 //num_retries_cmds_frominput=0;
@@ -701,11 +730,11 @@ void loop(void){
                 invia_comando(UART_NUM_2, addr_from, addr_to, cmd_tosend, param_tosend, 1);
             }
         } else if (detected_event->id_evento == RECEIVED_MSG) { 
-            ESP_LOGW(TAG,"loop(): This was the msg for me:\r\n");
-            printf("loop():cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
-            printf("loop():param_received: %s\r\n",detected_event->valore_evento.param_received);
-            printf("loop():ack_rep_counts: %d\r\n",detected_event->valore_evento.ack_rep_counts);
-            printf("loop():sender: %d\r\n",detected_event->valore_evento.sender);
+            ESP_LOGW(TAG,"loop(): The detected event is a msg for me! With this content:\r\n");
+            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
+            printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
+            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
+            printf("loop():detected_event->valore_evento.sender: %u\r\n",detected_event->valore_evento.sender);
 
             check_rcv_acks(detected_event);
 
