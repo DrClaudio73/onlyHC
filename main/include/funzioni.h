@@ -2,6 +2,7 @@
 // UART driver
 #include "driver/uart.h"
 #endif
+#include "messagehandle.h"
 
 #define ADDR_MASTER_STATION CONFIG_ADDR_MASTER_STATION
 #define ADDR_SLAVE_STATION CONFIG_ADDR_SLAVE_STATION
@@ -11,32 +12,45 @@
 /*When in production
 #ifdef CONFIG_ROLEMASTER
     #define STATION_ROLE STATIONMASTER
+    #define LOCAL_STATION_ADDRESS ADDR_MASTER_STATION
 #endif
 
 #ifdef CONFIG_ROLESLAVE
     #define STATION_ROLE STATIONSLAVE
+    #define LOCAL_STATION_ADDRESS ADDR_SLAVE_STATION
 #endif
 
 #ifdef CONFIG_ROLEMOBILE
     #define STATION_ROLE STATIONMOBILE
+    #define LOCAL_STATION_ADDRESS ADDR_MOBILE_STATION
 #endif
 */
 // ********************************************
-#define STATION_ROLE STATIONMASTER
-//#define STATION_ROLE STATIONSLAVE
-//#define STATION_ROLE STATIONMOBILE
-// ********************************************
+//#define DEVOPS_THIS_IS_STATION_MASTER
+#define DEVOPS_THIS_IS_STATION_SLAVE
+//#define DEVOPS_THIS_IS_STATION_MOBILE
 
+#ifdef DEVOPS_THIS_IS_STATION_MASTER
+#define STATION_ROLE STATIONMASTER
+#define LOCAL_STATION_ADDRESS ADDR_MASTER_STATION
+#endif
+
+#ifdef DEVOPS_THIS_IS_STATION_SLAVE
+    #define STATION_ROLE STATIONSLAVE
+    #define LOCAL_STATION_ADDRESS ADDR_SLAVE_STATION
+#endif
+
+#ifdef DEVOPS_THIS_IS_STATION_MOBILE
+    #define STATION_ROLE STATIONMOBILE
+    #define LOCAL_STATION_ADDRESS ADDR_MOBILE_STATION
+#endif
+
+// ********************************************
 #define DR_REG_RNG_BASE 0x3ff75144
 
 #define NUM_PRES_BLINKS CONFIG_NUM_PRES_BLINKS
 #define GPIO_INPUT_COMMAND_PIN CONFIG_COMMAND_PIN1
 #define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_INPUT_COMMAND_PIN)
-
-#include <stdio.h>
-#include "string.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
 
 static const char *TAG = "OnlyHC12App";
 
@@ -71,25 +85,9 @@ static const char *TAG = "OnlyHC12App";
     #define BAUDETRANSPARENTMODE 115200
 #endif
 
-#ifdef CONFIG_SIM800MODULE
-    #define RESET_IDLE 1
-    #define RESET_ACTIVE 0
-#endif
-
-#ifdef CONFIG_SIM808MODULE
-    #define RESET_IDLE 0
-    #define RESET_ACTIVE 1
-#endif
-
-// max buffer length
-#ifndef LINE_MAX
-#define LINE_MAX	2400
-#define FIELD_MAX 255
-#define NUMCELL_MAX	20
-#define MAX_ATTEMPTS 22
+#define NUM_MAX_CMDS 20 //max number of commands to handle
 #define NUM_MAX_RETRIES 5 //numero massimo di volte che provo a riemettere il comando prima di arrendermi
-#define NUM_LINES_TO_FLUSH 4
-#endif //LINE_MAX
+#define NUM_MAX_CHECKS_FOR_ACK 5 //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
 
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 
@@ -117,14 +115,12 @@ typedef struct Command_Status
     unsigned char rep_counts; //indice del numero di reinvio del medesimo comando (devono coincidere rep_counts e ack_rep_counts(?!?!)
     unsigned char num_checks; //numero di volte che verifico se il comando+rep_counts è stato ACKnowledgato, altrimenti dichiaro fallito e provo a reinviarlo con rep_counts incrememntato
     unsigned char addr_to;
+    unsigned char uart_controller;
 } command_status;
 
-unsigned char calcola_CRC(int totale);
-void pack_str(unsigned char* msg_to_send, const unsigned char* valore, unsigned char* k, int* totale);
-void pack_num(unsigned char* msg_to_send, unsigned char valore, unsigned char* k, int* totale);
-unsigned char* strcpy2(unsigned char* dst , const unsigned char* src);
-size_t strlen2(const unsigned char* stringa);
-
-//unsigned char* pack_msg(unsigned char uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param);
-unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
-unsigned char unpack_msg(const unsigned char* msg, unsigned char allowed_addr_from, unsigned char allowed_addr_to, unsigned char** cmd, unsigned char** param, unsigned char* acknowldged_rep_counts);
+////////////////////////////////////////////// CORE FUNCTIONS //////////////////////////////////////////////
+void list_commands_status();
+void clean_acknowledged_cmds();
+unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
+void check_rcv_acks(uart_port_t uart_controller, evento detected_event);
+evento* detect_event(uart_port_t uart_controller);
