@@ -1,3 +1,8 @@
 {
-    "C_Cpp.intelliSenseEngineFallback": "Enabled"
+    "C_Cpp.intelliSenseEngineFallback": "Disabled",
+    "files.associations": {
+        "type_traits": "c",
+        "gpio.h": "c",
+        "messagehandle.h": "c"
+    }
 }
