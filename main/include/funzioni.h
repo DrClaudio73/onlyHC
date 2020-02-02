@@ -24,10 +24,11 @@
     #define STATION_ROLE STATIONMOBILE
     #define LOCAL_STATION_ADDRESS ADDR_MOBILE_STATION
 #endif
-*/
+*/ 
+
 // ********************************************
-//#define DEVOPS_THIS_IS_STATION_MASTER
-#define DEVOPS_THIS_IS_STATION_SLAVE
+#define DEVOPS_THIS_IS_STATION_MASTER
+//#define DEVOPS_THIS_IS_STATION_SLAVE
 //#define DEVOPS_THIS_IS_STATION_MOBILE
 
 #ifdef DEVOPS_THIS_IS_STATION_MASTER
@@ -122,6 +123,6 @@ typedef struct Command_Status
 void list_commands_status();
 void clean_processed_cmds();
 unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
-unsigned char check_rcv_acks(uart_port_t uart_controller, evento* detected_event);
+unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event);
 unsigned char manage_cmd_retries(uart_port_t uart_controller,evento* detected_event);
 evento* detect_event(uart_port_t uart_controller);

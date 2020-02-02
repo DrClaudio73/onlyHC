@@ -236,7 +236,7 @@ unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_e
     unsigned char ret = 0;
     unsigned char i=0;
     printf("manage_cmd_retries():BEGIN\r\n");
-    printf("manage_cmd_retries():type of event = %u ",detected_event->type_of_event);
+    printf("manage_cmd_retries():type of event = %u \r\n",detected_event->type_of_event);
     if (!(detected_event->type_of_event==NOTHING)){
         ESP_LOGW(TAG,"manage_cmd_retries():THIS SHOULD NOT HAPPEN\r\n");
     }
@@ -266,7 +266,7 @@ unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_e
     return ret;
 }
 
-unsigned char check_rcv_acks(uart_port_t uart_controller, evento* detected_event){
+unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event){
     printf("check_rcv_acks():BEGIN\r\n");
     unsigned char ret = 1;
     unsigned char i=0;
@@ -301,7 +301,7 @@ unsigned char check_rcv_acks(uart_port_t uart_controller, evento* detected_event
             i++;
         } //while (i<num_cmd_under_processing)
     }
-
+    printf("check_rcv_acks(): exit with code: %u\r\n",ret);
     return ret;
 }
 
@@ -396,9 +396,15 @@ evento* detect_event(uart_port_t uart_controller){
         }
         station_iter++;
     }
-
-    if (!(check_rcv_acks(uart_controller, &detected_event)==0)){ //before return check if the RECEIVED_MSG is actually a RECEIVED_ACK
-        manage_cmd_retries(uart_controller,&detected_event); //if I call this then I have not yet found an event so I am looking for a FAIL_TO_SEND_CMD condition 
+    //before return check if:
+    //- I have not received anyhting (e.g. not a message nor an input command) OR
+    //- the received MSG is NOT an ACK
+    //then I have to manage the retries looking for a FAIL_TO_SEND_CMD event
+    check_rcved_acks(uart_controller, &detected_event);
+    if (detected_event.type_of_event==NOTHING) {
+        //if I call this then I have not yet found an event (neither an input_cmd nor a message nor an ACK) 
+        //so I am 
+        manage_cmd_retries(uart_controller,&detected_event);
     }
     return &detected_event;
 }
