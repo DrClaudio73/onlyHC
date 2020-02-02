@@ -85,13 +85,13 @@ static const char *TAG = "OnlyHC12App";
     #define BAUDETRANSPARENTMODE 115200
 #endif
 
-#define NUM_MAX_CMDS 20 //max number of commands to handle
+#define NUM_MAX_CMDS 50 //max number of commands to handle
 #define NUM_MAX_RETRIES 5 //numero massimo di volte che provo a riemettere il comando prima di arrendermi
 #define NUM_MAX_CHECKS_FOR_ACK 5 //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
 
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 
-enum typeOfevent {NOTHING=0, IO_INPUT_ACTIVE=1, RECEIVED_MSG = 2};
+enum typeOfevent {NOTHING=0, IO_INPUT_ACTIVE=1, RECEIVED_MSG = 2, RECEIVED_ACK= 3, FAIL_TO_SEND_CMD = 4};
 
 typedef struct Valore_Evento_t
 {
@@ -99,12 +99,12 @@ typedef struct Valore_Evento_t
     unsigned char* cmd_received;
     unsigned char* param_received;
     unsigned char ack_rep_counts;
-    unsigned char sender;
+    unsigned char pair_addr;
 } valore_evento_t; 
 
 typedef struct Evento
 {
-    enum typeOfevent id_evento;
+    enum typeOfevent type_of_event;
     valore_evento_t valore_evento;
 } evento;
 
@@ -120,7 +120,8 @@ typedef struct Command_Status
 
 ////////////////////////////////////////////// CORE FUNCTIONS //////////////////////////////////////////////
 void list_commands_status();
-void clean_acknowledged_cmds();
+void clean_processed_cmds();
 unsigned char invia_comando(uart_port_t uart_controller, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
-void check_rcv_acks(uart_port_t uart_controller, evento detected_event);
+unsigned char check_rcv_acks(uart_port_t uart_controller, evento* detected_event);
+unsigned char manage_cmd_retries(uart_port_t uart_controller,evento* detected_event);
 evento* detect_event(uart_port_t uart_controller);
