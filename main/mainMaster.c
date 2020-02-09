@@ -40,6 +40,7 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 ////////////////////////////////////////////// GLOBAL VARIABLES //////////////////////////////////////////////
 command_status commands_status[NUM_MAX_CMDS];
 unsigned char num_cmd_under_processing=0;
+gpio_num_t gpio_input_command_pin[NUM_HANDLED_INPUTS];
 
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void setupmyRadioHC12(void) {
@@ -84,10 +85,13 @@ void setup(void){
     gpio_set_level((gpio_num_t)BLINK_GPIO, 1); //switch the led OFF
     ESP_LOGW(TAG,"Set up presentation led ended");
 
+    gpio_input_command_pin[0]=(gpio_num_t) GPIO_INPUT_COMMAND_PIN_UNO;
+    gpio_input_command_pin[1]=(gpio_num_t) GPIO_INPUT_COMMAND_PIN_DUE;
+
     /* CONFIGURING COMMAND INPUT */
     gpio_config_t io_conf;
     //bit mask of the pins, use GPIO4 here
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    io_conf.pin_bit_mask = GPIO_INPUT_COMMAND_PINS;
     //set as input mode
     io_conf.mode = GPIO_MODE_INPUT;
     //enable pull-up mode
@@ -98,7 +102,7 @@ void setup(void){
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
-    ESP_LOGW(TAG,"Set up command input ended");
+    ESP_LOGW(TAG,"Set up command inputs ended");
 
     //Initializing Radio HC12
     setupmyRadioHC12();
@@ -309,12 +313,15 @@ evento* detect_event(uart_port_t uart_controller){
     printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
     clean_processed_cmds();
     static evento detected_event;
-    static unsigned char IN_PREC;
-    unsigned char IN=(unsigned char) gpio_get_level((gpio_num_t )GPIO_INPUT_COMMAND_PIN);
-    //printf("detectEvent(): value read: %d!\r\n",IN);
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN));
+    unsigned char IN[NUM_HANDLED_INPUTS];
+    static unsigned char IN_PREC[NUM_HANDLED_INPUTS];
+    
+    for (int i=0; i<sizeof(IN); i++ ) IN[i] = (unsigned char) gpio_get_level((gpio_num_t )gpio_input_command_pin[i]);
+
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN[0])); //echoes PIN1 on blinking led
     //Reset event variable
     detected_event.type_of_event = NOTHING;
+    detected_event.valore_evento.input_number = 0;
     detected_event.valore_evento.value_of_input = 0;
     detected_event.valore_evento.cmd_received=0;
     detected_event.valore_evento.param_received=0;
@@ -322,19 +329,22 @@ evento* detect_event(uart_port_t uart_controller){
     detected_event.valore_evento.pair_addr=0;
     
     //Detect if IO_INPUT went low 
-    if (!(IN==IN_PREC)){
-        detected_event.type_of_event = IO_INPUT_ACTIVE;
-        printf("detectEvent(): IN: %u ; IN_PREC: %u\r\n",IN,IN_PREC);
-        printf("detectEvent(): !!!!!!! IO Input Event Occurred !!!!!!!\r\n");
-        detected_event.valore_evento.value_of_input = IN;
-        detected_event.valore_evento.cmd_received=0;
-        detected_event.valore_evento.param_received=0;
-        detected_event.valore_evento.ack_rep_counts=0;
-        detected_event.valore_evento.pair_addr=0; //myself
-        IN_PREC=IN;
-        return &detected_event;
+    for (int i=0; i<sizeof(IN) ; i++){
+        if (!(IN[i]==IN_PREC[i])){
+            detected_event.type_of_event = IO_INPUT_ACTIVE;
+            printf("detectEvent(): IN[%u]: %u ; IN_PREC[%u]: %u\r\n",i,IN[i],i,IN_PREC[i]);
+            printf("detectEvent(): !!!!!!! IO Input Event Occurred !!!!!!!\r\n");
+            detected_event.valore_evento.input_number = i;
+            detected_event.valore_evento.value_of_input = IN[i];
+            detected_event.valore_evento.cmd_received=0;
+            detected_event.valore_evento.param_received=0;
+            detected_event.valore_evento.ack_rep_counts=0;
+            detected_event.valore_evento.pair_addr=0; //myself
+            IN_PREC[i]=IN[i];
+            return &detected_event; //with this return just one input at a time is detected and handled
+        }
+        IN_PREC[i]=IN[i];
     }
-    IN_PREC=IN;
 
     //Detect if a message has been received from any station reading data from the uart controller
     unsigned char *line1;
@@ -385,6 +395,7 @@ evento* detect_event(uart_port_t uart_controller){
         if (ret==0){
             detected_event.type_of_event = RECEIVED_MSG;
             printf("detectEvent(): !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!A message of interest has been detected!!!!!!!\r\n");
+            detected_event.valore_evento.input_number = 0;
             detected_event.valore_evento.value_of_input = 0;
             detected_event.valore_evento.cmd_received=cmd_received;
             detected_event.valore_evento.param_received=param_received;
@@ -432,16 +443,21 @@ void loop(void){
 
         if (detected_event->type_of_event == IO_INPUT_ACTIVE) { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
             if (detected_event->valore_evento.value_of_input==1){ // NOTHING TO DO: 
-                printf("\r\nloop(): EVENTO SU I_O PIN GESTITO CORRETTAMENTE!!!!!\r\n");
-                return;
+                printf("\r\nloop(): EVENTO SU I_O PIN %u GESTITO CORRETTAMENTE!!!!!\r\n", detected_event->valore_evento.input_number);
+                ESP_LOGW(TAG,"loop(): The detected event is a BUTTON press:\r\n");
+                printf("loop():detected_event->type_of_event: %u\r\n",detected_event->type_of_event);
+                printf("loop():detected_event->valore_evento.input_number: %u\r\n",detected_event->valore_evento.input_number);
+                printf("loop():detected_event->valore_evento.value_of_input: %u\r\n",detected_event->valore_evento.value_of_input);
+
             } else { //SENDING COMMAND TO OPEN
                 //num_retries_cmds_frominput=0;
                 /*addr_to=ADDR_SLAVE_STATION; //ADDR_MOBILE_STATION;
                 strcpy((char *)cmd_tosend,"APRI");
                 strcpy((char *)param_tosend,"0");
                 invia_comando(UART_NUM_2, addr_from, addr_to, cmd_tosend, param_tosend, 1);*/
-                invia_comando(UART_NUM_2, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "APRI", (const unsigned char *) "0", 1);
-                
+                char cmd_param[FIELD_MAX];
+                sprintf(cmd_param,"%d",detected_event->valore_evento.input_number);
+                invia_comando(UART_NUM_2, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "APRI", (const unsigned char *) cmd_param, 1);
             }
         } else if (detected_event->type_of_event == RECEIVED_MSG) { 
             ESP_LOGW(TAG,"loop(): The detected event is a msg for me! With this content:\r\n");
@@ -476,7 +492,7 @@ void loop(void){
             printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
         } else {
-            vTaskDelay(5/portTICK_RATE_MS);
+            vTaskDelay(1000/portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONMASTER)
@@ -569,7 +585,7 @@ void loop(void){
         }
     }  //if (STATION_ROLE==STATIONMOBILE)
 
-    return; 
+    return; //to be removed since it is already done in each STATION_ROLE if statement
 }
 
 // Main application

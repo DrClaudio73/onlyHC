@@ -11,10 +11,21 @@ config BLINK_GPIO
 
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
-config COMMAND_PIN1
-    int "GPIO number for giving command"
+config COMMAND_PIN_UNO
+    int "First GPIO number for giving command"
 	range 0 34
 	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config COMMAND_PIN_DUE
+    int "Second GPIO number for giving command"
+	range 0 34
+	default 5
 	help
 		GPIO number (IOxx) to input command.
 

@@ -50,9 +50,10 @@
 #define DR_REG_RNG_BASE 0x3ff75144
 
 #define NUM_PRES_BLINKS CONFIG_NUM_PRES_BLINKS
-#define GPIO_INPUT_COMMAND_PIN CONFIG_COMMAND_PIN1
-#define GPIO_INPUT_PIN_SEL  (1ULL<<GPIO_INPUT_COMMAND_PIN)
-
+#define NUM_HANDLED_INPUTS 2
+#define GPIO_INPUT_COMMAND_PIN_UNO CONFIG_COMMAND_PIN_UNO
+#define GPIO_INPUT_COMMAND_PIN_DUE CONFIG_COMMAND_PIN_DUE
+#define GPIO_INPUT_COMMAND_PINS  ((1ULL<<GPIO_INPUT_COMMAND_PIN_UNO) | (1ULL<<GPIO_INPUT_COMMAND_PIN_DUE))
 static const char *TAG = "OnlyHC12App";
 
 #define BLINK_GPIO CONFIG_BLINK_GPIO
@@ -97,6 +98,7 @@ enum typeOfevent {NOTHING=0, IO_INPUT_ACTIVE=1, RECEIVED_MSG = 2, RECEIVED_ACK= 
 typedef struct Valore_Evento_t
 {
     unsigned char value_of_input;
+    unsigned char input_number;
     unsigned char* cmd_received;
     unsigned char* param_received;
     unsigned char ack_rep_counts;
