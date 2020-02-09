@@ -27,8 +27,8 @@
 */ 
 
 // ********************************************
-#define DEVOPS_THIS_IS_STATION_MASTER
-//#define DEVOPS_THIS_IS_STATION_SLAVE
+//#define DEVOPS_THIS_IS_STATION_MASTER
+#define DEVOPS_THIS_IS_STATION_SLAVE
 //#define DEVOPS_THIS_IS_STATION_MOBILE
 
 #ifdef DEVOPS_THIS_IS_STATION_MASTER

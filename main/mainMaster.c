@@ -44,25 +44,6 @@ unsigned char num_cmd_under_processing=0;
 gpio_num_t gpio_input_command_pin[NUM_HANDLED_INPUTS];
 static EventGroupHandle_t my_event_group;
 const int TRIGGERED = BIT0;
-
-// timeout task
-void timeout_task(void *pvParameter) {
-	
-	while(1) {
-		// wait the timeout period
-		EventBits_t uxBits;
-		uxBits = xEventGroupWaitBits(my_event_group, TRIGGERED, true, true, CONFIG_TIMEOUT / portTICK_PERIOD_MS);
-		
-		// if found bit was not set, the function returned after the timeout period
-		if((uxBits & TRIGGERED) == 0) {
-			// turn both leds off
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
-
-		}
-	}
-}
-
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void setupmyRadioHC12(void) {
     gpio_pad_select_gpio((gpio_num_t)HC12SETGPIO);
@@ -166,7 +147,23 @@ void setup(void){
     return;
 }
 
+////////////////////////////////////////////// TIMEOUT FUNCTIONS //////////////////////////////////////////////
+void timeout_task(void *pvParameter) {
+	
+	while(1) {
+		// wait the timeout period
+		EventBits_t uxBits;
+		uxBits = xEventGroupWaitBits(my_event_group, TRIGGERED, true, true, CONFIG_TIMEOUT / portTICK_PERIOD_MS);
+		
+		// if found bit was not set, the function returned after the timeout period
+		if((uxBits & TRIGGERED) == 0) {
+			// turn both leds off
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
 
+		}
+	}
+}
 ////////////////////////////////////////////// CORE FUNCTIONS //////////////////////////////////////////////
 void list_commands_status(){
     unsigned char i=0;
@@ -545,7 +542,7 @@ void loop(void){
             printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
         } else {
-            vTaskDelay(1000/portTICK_RATE_MS);
+            vTaskDelay(5/portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONMASTER)
