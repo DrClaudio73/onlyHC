@@ -19,6 +19,7 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 // FreeRTOS includes
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/event_groups.h"
 
 // UART driver
 #include "driver/uart.h"
@@ -41,6 +42,26 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 command_status commands_status[NUM_MAX_CMDS];
 unsigned char num_cmd_under_processing=0;
 gpio_num_t gpio_input_command_pin[NUM_HANDLED_INPUTS];
+static EventGroupHandle_t my_event_group;
+const int TRIGGERED = BIT0;
+
+// timeout task
+void timeout_task(void *pvParameter) {
+	
+	while(1) {
+		// wait the timeout period
+		EventBits_t uxBits;
+		uxBits = xEventGroupWaitBits(my_event_group, TRIGGERED, true, true, CONFIG_TIMEOUT / portTICK_PERIOD_MS);
+		
+		// if found bit was not set, the function returned after the timeout period
+		if((uxBits & TRIGGERED) == 0) {
+			// turn both leds off
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+
+		}
+	}
+}
 
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void setupmyRadioHC12(void) {
@@ -79,17 +100,32 @@ void setup(void){
     ESP_LOGW(TAG,"Setting up...................");
 
     /* CONFIGURING PRESENTATION BLINK LED */
-    gpio_pad_select_gpio((gpio_num_t)BLINK_GPIO);
+    //gpio_pad_select_gpio((gpio_num_t)BLINK_GPIO);
     /* Set the GPIO as a push/pull output */
-    gpio_set_direction((gpio_num_t)BLINK_GPIO, GPIO_MODE_OUTPUT);
-    gpio_set_level((gpio_num_t)BLINK_GPIO, 1); //switch the led OFF
-    ESP_LOGW(TAG,"Set up presentation led ended");
+    //gpio_set_direction((gpio_num_t)BLINK_GPIO, GPIO_MODE_OUTPUT);
+    //gpio_set_level((gpio_num_t)BLINK_GPIO, 1); //switch the led OFF
+    //ESP_LOGW(TAG,"Set up presentation led ended");
+
+    /* CONFIGURING OUTPUT LEDS */
+    gpio_config_t io_conf;
+    //disable interrupt
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO18/19
+    io_conf.pin_bit_mask = GPIO_OUTPUT_LEDS;
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+    ESP_LOGW(TAG,"Set up of output leds ended");
 
     gpio_input_command_pin[0]=(gpio_num_t) GPIO_INPUT_COMMAND_PIN_UNO;
     gpio_input_command_pin[1]=(gpio_num_t) GPIO_INPUT_COMMAND_PIN_DUE;
 
     /* CONFIGURING COMMAND INPUT */
-    gpio_config_t io_conf;
     //bit mask of the pins, use GPIO4 here
     io_conf.pin_bit_mask = GPIO_INPUT_COMMAND_PINS;
     //set as input mode
@@ -102,15 +138,18 @@ void setup(void){
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
-    ESP_LOGW(TAG,"Set up command inputs ended");
+    ESP_LOGW(TAG,"Set up of command inputs ended");
 
     //Initializing Radio HC12
     setupmyRadioHC12();
-    ESP_LOGW(TAG,"Set up HC12 Radio ended");
+    ESP_LOGW(TAG,"Set up of HC12 Radio ended");
+
+   	my_event_group = xEventGroupCreate();
+    ESP_LOGW(TAG,"Event Group Created");
 
     //presentation blinking
     presentBlink(BLINK_GPIO,NUM_PRES_BLINKS);
-    ESP_LOGW(TAG,"Set up things ended");
+    ESP_LOGW(TAG,"Set up of everything ended");
     ESP_LOGW(TAG,"==============================");
 
     //Initializing DB
@@ -318,7 +357,9 @@ evento* detect_event(uart_port_t uart_controller){
     
     for (int i=0; i<sizeof(IN); i++ ) IN[i] = (unsigned char) gpio_get_level((gpio_num_t )gpio_input_command_pin[i]);
 
-    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN[0])); //echoes PIN1 on blinking led
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN[0])); //echoes PIN1 on OK_GPIO led
+    //ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, (uint32_t) (1-IN[0]))); //echoes PIN1 on OK_GPIO led
+
     //Reset event variable
     detected_event.type_of_event = NOTHING;
     detected_event.valore_evento.input_number = 0;
@@ -456,11 +497,15 @@ void loop(void){
                 strcpy((char *)param_tosend,"0");
                 invia_comando(UART_NUM_2, addr_from, addr_to, cmd_tosend, param_tosend, 1);*/
                 char cmd_param[FIELD_MAX];
+                ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+                ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
                 sprintf(cmd_param,"%d",detected_event->valore_evento.input_number);
                 invia_comando(UART_NUM_2, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "APRI", (const unsigned char *) cmd_param, 1);
             }
         } else if (detected_event->type_of_event == RECEIVED_MSG) { 
             ESP_LOGW(TAG,"loop(): The detected event is a msg for me! With this content:\r\n");
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
             printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
             printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
@@ -479,6 +524,10 @@ void loop(void){
             } */
         } else if (detected_event->type_of_event == RECEIVED_ACK) {
             ESP_LOGW(TAG,"loop(): received and ACK for command:\r\n");
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 1)); //echoes PIN1 on OK_GPIO led
+			xEventGroupSetBits(my_event_group, TRIGGERED);
+
             vTaskDelay(1000/portTICK_RATE_MS);
             printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
@@ -486,6 +535,10 @@ void loop(void){
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
         } else if (detected_event->type_of_event == FAIL_TO_SEND_CMD) {
             ESP_LOGW(TAG,"loop(): failure to send command:\r\n");
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 1)); //echoes PIN1 on OK_GPIO led
+            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
+			xEventGroupSetBits(my_event_group, TRIGGERED);
+            
             vTaskDelay(2500/portTICK_RATE_MS);
             printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
@@ -591,6 +644,7 @@ void loop(void){
 // Main application
 void app_main() {
     setup();
+    xTaskCreate(&timeout_task, "timeout_task", 2048, NULL, 5, NULL);
     ESP_LOGE(TAG,"Entering while loop!!!!!\r\n");
     while(1)
         loop();

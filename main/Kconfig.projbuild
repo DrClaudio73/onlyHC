@@ -1,11 +1,41 @@
 menu "Master Station Main Configuration"
 
+config TIMEOUT
+    int "Timeout (in milliseconds)"
+range 1000 15000
+    default 3500
+	help
+		Timeout for switching off leds after notifying sucess/failire.
+
+
 config BLINK_GPIO
     int "Blink GPIO number"
-	range 0 34
+range 0 34
 	default 2
 	help
-		GPIO number (IOxx) to blink on and off.
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config GPIO_OK
+    int "OK GPIO number"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config GPIO_NOK
+    int "NOT OK GPIO number"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
 
 		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
 
