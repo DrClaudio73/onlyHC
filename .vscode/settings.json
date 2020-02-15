@@ -3,6 +3,10 @@
     "files.associations": {
         "type_traits": "c",
         "gpio.h": "c",
-        "messagehandle.h": "c"
+        "messagehandle.h": "c",
+        "task.h": "c",
+        "eventengine.h": "c",
+        "typeconv.h": "c",
+        "auxiliaryfuncs.h": "c"
     }
 }
