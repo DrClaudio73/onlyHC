@@ -9,7 +9,7 @@
 
 static const char *TAG = "EventE";
 
-void list_commands_status(commands* my_commands){
+void list_commands_status(sent_commands* my_commands){
     unsigned char i=0;
     /////REPORT commands_status[] BEFORE processing
     if (my_commands->num_cmd_under_processing == 0) {
@@ -27,7 +27,7 @@ void list_commands_status(commands* my_commands){
     return;
 }
 
-void clean_processed_cmds(commands* my_commands){
+void clean_processed_cmds(sent_commands* my_commands){
     printf("clean_processed_cmds(): BEFORE PROCESSING\r\n");
     list_commands_status(my_commands);
 
@@ -68,7 +68,7 @@ void clean_processed_cmds(commands* my_commands){
     return;
 }
 
-unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
+unsigned char invia_comando(uart_port_t uart_controller, sent_commands* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
     unsigned char* msg;
 
     printf("invia_comando():uart_controller: %u\r\n",uart_controller);
@@ -116,7 +116,7 @@ unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, 
     return 0;
 }
 
-unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_event, commands *my_commands){
+unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_event, sent_commands *my_commands){
     unsigned char ret = 0;
     unsigned char i=0;
     printf("manage_cmd_retries():BEGIN\r\n");
@@ -151,7 +151,7 @@ unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_e
     return ret;
 }
 
-unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, commands* my_commands){
+unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, sent_commands* my_commands){
     printf("check_rcv_acks():BEGIN\r\n");
     unsigned char ret = 1;
     unsigned char i=0;
@@ -190,7 +190,7 @@ unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_eve
     return ret;
 }
 
-evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, commands* my_commands){
+evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, sent_commands* my_commands){
     printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
     clean_processed_cmds(my_commands);
     static evento detected_event;

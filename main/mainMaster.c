@@ -34,7 +34,7 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 //Personal modules includes
 #include "funzioni.h"
 //#include "manageUART.h"
-//#include "typeconv.h"
+#include "typeconv.h"
 #include "messagehandle.h"
 #include "auxiliaryfuncs.h"
 #include "eventengine.h"
@@ -45,7 +45,7 @@ static EventGroupHandle_t my_event_group;
 const int TRIGGERED = BIT0;
 static const char *TAG1 = "OnlyHC12App";
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
-void setup(commands* my_commands){
+void setup(sent_commands* my_commands){
     ESP_LOGW(TAG1,"==============================");
     ESP_LOGW(TAG1,"Welcome to HC12 control App");
     ESP_LOGW(TAG1,"Setting up...................");
@@ -64,7 +64,7 @@ void setup(commands* my_commands){
     //set as output mode
     io_conf.mode = GPIO_MODE_OUTPUT;
     //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = GPIO_OUTPUT_LEDS;
+    io_conf.pin_bit_mask = GPIO_OUTPUT_PINS;
     //disable pull-down mode
     io_conf.pull_down_en = 0;
     //disable pull-up mode
@@ -121,6 +121,16 @@ void setup(commands* my_commands){
     return;
 }
 
+void give_gpio_feedback(char unsigned OK_val, char unsigned NOK_val){
+    #ifdef OK_GPIO        
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, NOK_val)); 
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, OK_val)); 
+    #endif
+    if (OK_val || NOK_val){ //if I lit any LED then shall trigger TIMER (timeout task)
+        xEventGroupSetBits(my_event_group, TRIGGERED);
+    }
+    return;
+}
 ////////////////////////////////////////////// TIMEOUT FUNCTIONS //////////////////////////////////////////////
 void timeout_task(void *pvParameter) {
 	
@@ -132,15 +142,13 @@ void timeout_task(void *pvParameter) {
 		// if found bit was not set, the function returned after the timeout period
 		if((uxBits & TRIGGERED) == 0) {
 			// turn both leds off
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //echoes PIN1 on OK_GPIO led
-
+            give_gpio_feedback(0,0);
 		}
 	}
 }
 ////////////////////////////////////////////// CORE FUNCTIONS //////////////////////////////////////////////
 
-void loop(commands* my_commands){
+void loop(sent_commands* my_commands){
     evento* detected_event;
 
     printf("loop(): *******************************************Entering loop() function!!!!!\r\n");
@@ -159,7 +167,6 @@ void loop(commands* my_commands){
     }
 
     //Listening for any event to occour
-
     detected_event=detect_event(UART_NUM_2, miogpio_input_command_pin, my_commands);
     
     if (STATION_ROLE==STATIONMASTER){ //BEHAVE AS MASTER STATION
@@ -182,8 +189,7 @@ void loop(commands* my_commands){
                 strcpy((char *)param_tosend,"0");
                 invia_comando(UART_NUM_2, addr_from, addr_to, cmd_tosend, param_tosend, 1);*/
                 char cmd_param[FIELD_MAX];
-                ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //swithces off NOK led since a new command is going to be issued
-                ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //swithces off OK led since a new command is going to be issued
+                give_gpio_feedback(0,0); //swithces off NOK and OK led since a new command is going to be issued
                 sprintf(cmd_param,"%d",detected_event->valore_evento.input_number);
                 invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "APRI", (const unsigned char *) cmd_param, 1);
             }
@@ -193,11 +199,9 @@ void loop(commands* my_commands){
             printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
             printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //swithces off NOK led since a new command is going to be issued
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //swithces off OK led since a new command is going to be issued
-
-            //check_rcv_acks(detected_event);
-
+            //if I have received a command I am forwarding it to the slave station
+            give_gpio_feedback(0,0); //swithces off NOK and OK led since a new command is going to be issued
+            invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received, 1);
             /*
             if (waiting_for_cmdinputack==1){
                 printf("loop(): I was waiting for an ACK so I should do something\r\n");
@@ -209,10 +213,7 @@ void loop(commands* my_commands){
             } */
         } else if (detected_event->type_of_event == RECEIVED_ACK) {
             ESP_LOGW(TAG1,"loop(): received and ACK for command:\r\n");
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 0)); //NOK led is switched off since an ACK has been received
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 1)); //OK led is lit since an ACK has been received
-			xEventGroupSetBits(my_event_group, TRIGGERED);
-
+            give_gpio_feedback(1,0); //NOK led is switched off and OK led is lit since an ACK has been received
             vTaskDelay(1000/portTICK_RATE_MS);
             printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
             printf("loop():detected_event->valore_evento.param_received: %s\r\n",detected_event->valore_evento.param_received);
@@ -220,9 +221,7 @@ void loop(commands* my_commands){
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
         } else if (detected_event->type_of_event == FAIL_TO_SEND_CMD) {
             ESP_LOGW(TAG1,"loop(): failure to send command:\r\n");
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, 1)); //NOK led is lit since a FAILURE happened
-            ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)OK_GPIO, 0)); //OK led is switched off since a FAILURE happened
-			xEventGroupSetBits(my_event_group, TRIGGERED);
+            give_gpio_feedback(0,1); //NOK led is lit and OK led is switched off since a FAILURE happened
             
             vTaskDelay(2500/portTICK_RATE_MS);
             printf("loop():detected_event->valore_evento.cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
@@ -244,19 +243,24 @@ void loop(commands* my_commands){
             printf("loop():param_received: %s\r\n",detected_event->valore_evento.param_received);
             printf("loop():ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("loop():pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
-            //strcpy((char *)cmd_tosend,"ACK_APRI");
-            //strcpy((char *)param_tosend,"0");
+            //I am sending ACK to the sending station
             invia_comando(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *) "ACK_APRI", detected_event->valore_evento.param_received,
              detected_event->valore_evento.ack_rep_counts);
 
-            /*if (waiting_for_ack==1){
-                printf("loop(): I was waiting for an ACK (?!?!?!?) so I should do something\r\n");
-                // code 
-            } else
-            {
-                printf("loop(): I received a valid COMMAND (open, close, sendreport) from MASTER OR MOBILE station that I should satisfy\r\n");
-                // code 
-            } */
+            //Actuating APRI commands
+
+            if (strncmp2(detected_event->valore_evento.cmd_received,(const unsigned char *) "APRI",4)==0){
+                if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "0", 1)==0){
+                    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 0)); //closing GARAGE relay             
+                    vTaskDelay(CONFIG_ON_COMMAND_LENGTH/portTICK_RATE_MS);
+                    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 1)); //relasing GARAGE relay             
+                }     
+                if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "1", 1)==0){
+                    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 0)); //closing BIG GATE relay             
+                    vTaskDelay(CONFIG_ON_COMMAND_LENGTH/portTICK_RATE_MS);
+                    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 1)); //relasing BIG GATE relay             
+                }     
+            }
         } else {
             vTaskDelay(5/portTICK_RATE_MS);
             return;
@@ -328,7 +332,7 @@ void loop(commands* my_commands){
 
 // Main application
 void app_main() {
-    static commands my_commands;
+    static sent_commands my_commands;
     setup(&my_commands);
     xTaskCreate(&timeout_task, "timeout_task", 2048, NULL, 5, NULL);
     ESP_LOGE(TAG1,"Entering while loop!!!!!\r\n");

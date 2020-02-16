@@ -5,44 +5,17 @@ config TIMEOUT
 range 1000 15000
     default 3500
 	help
-		Timeout for switching off leds after notifying sucess/failire.
+		Timeout for switching off leds after notifying sucess/failure.
 
-
-config BLINK_GPIO
-    int "Blink GPIO number"
-range 0 34
-	default 2
+config ON_COMMAND_LENGTH
+    int "Duration of Commands (in milliseconds)"
+range 500 2000
+    default 550
 	help
-		GPIO number (IOxx) to blink on-off
+		Duration of Commands active status (in milliseconds).
 
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-
-		GPIOs 35-39 are input-only so cannot be used as outputs.
-
-config GPIO_OK
-    int "OK GPIO number"
-	range 0 34
-	default 16
-	help
-		GPIO number (IOxx) to notify OK of last command.
-
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-
-		GPIOs 35-39 are input-only so cannot be used as outputs.
-
-config GPIO_NOK
-    int "NOT OK GPIO number"
-	range 0 34
-	default 17
-	help
-		GPIO number (IOxx) to notify KO of last command.
-
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-
-		GPIOs 35-39 are input-only so cannot be used as outputs.
-
-config COMMAND_PIN_UNO
-    int "First GPIO number for giving command"
+config MASTER_INPUT_COMMAND_PIN_UNO
+    int "Master station First GPIO number for giving input command"
 	range 0 34
 	default 4
 	help
@@ -52,12 +25,155 @@ config COMMAND_PIN_UNO
 
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
-config COMMAND_PIN_DUE
-    int "Second GPIO number for giving command"
+config MASTER_INPUT_COMMAND_PIN_DUE
+    int "Master station: Second GPIO number for giving input command"
 	range 0 34
 	default 5
 	help
 		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_BLINK_GPIO
+    int "Master station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_GPIO_OK
+    int "Master station OK GPIO number"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_GPIO_NOK
+    int "Master station NOT OK GPIO number"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_INPUT_COMMAND_PIN_UNO
+    int "Mobile station First GPIO number for giving input command"
+	range 0 34
+	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_INPUT_COMMAND_PIN_DUE
+    int "Mobile station: Second GPIO number for giving input command"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_BLINK_GPIO
+    int "Mobile station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_GPIO_OK
+    int "Mobile station OK GPIO number"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_GPIO_NOK
+    int "Mobile station NOT OK GPIO number"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_INPUT_COMMAND_PIN_UNO
+    int "Slave station First GPIO number for giving input command"
+	range 0 34
+	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_INPUT_COMMAND_PIN_DUE
+    int "Slave station: Second GPIO number for giving input command"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_BLINK_GPIO
+    int "Slave station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_GARAGE_CMD_GPIO
+    int "Slave station GARAGE command OUTPUT GPIO number (ACTUATOR)"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_BIGGATE_CMD_GPIO
+    int "Slave station BIGGATE command OUTPUT GPIO number (ACTUATOR)"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
 
 		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
 

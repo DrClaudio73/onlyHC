@@ -53,7 +53,7 @@ unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const un
     //---REPORT+PARAM=ALL      to be implemented
     //SUPPORTED REPLIES:
     //---ACK_APRI+RCV_PARAM+RCV_REP_COUNTS
-    //---REPORT+PARAM=SPECIFIC  to be implemented
+    //---ACK_REPORT+PARAM=SPECIFIC  to be implemented
     //---ACK_REPORT+PARAM=ALL   to be implemented, in this case an handshake to trasnfer N items in transaction should be implemented
 
     //build message
