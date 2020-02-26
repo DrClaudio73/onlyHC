@@ -1,6 +1,7 @@
 #define NUM_MAX_CMDS 50 //max number of commands to handle
 #define NUM_MAX_RETRIES 5 //numero massimo di volte che provo a riemettere il comando prima di arrendermi
 #define NUM_MAX_CHECKS_FOR_ACK 5 //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
+#define NUM_CHECKS_FOR_ALREADY_RECEIVED NUM_MAX_RETRIES*NUM_MAX_CHECKS_FOR_ACK+5 //numero di volte che provo a vedere se ho ho già ricevuto questo comando in precedenza (magari con un repcounts inferiore) per scartarlo. Superato questo check considero nuovamente possibile ricevere un comando siffatto
 
 #include <stdio.h>
 #include "string.h"
@@ -18,8 +19,8 @@
 
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 
-#define DEVOPS_THIS_IS_STATION_MASTER
-//#define DEVOPS_THIS_IS_STATION_SLAVE
+//#define DEVOPS_THIS_IS_STATION_MASTER
+#define DEVOPS_THIS_IS_STATION_SLAVE
 //#define DEVOPS_THIS_IS_STATION_MOBILE
 
 #ifdef DEVOPS_THIS_IS_STATION_MASTER
@@ -88,6 +89,7 @@ typedef struct Valore_Evento_t
     unsigned char* param_received;
     unsigned char ack_rep_counts;
     unsigned char pair_addr;
+    uart_port_t uart_controller;
 } valore_evento_t;
 
 typedef struct Evento
@@ -102,20 +104,22 @@ typedef struct Command_Status
     unsigned char param[FIELD_MAX];
     unsigned char rep_counts; //indice del numero di reinvio del medesimo comando (devono coincidere rep_counts e ack_rep_counts(?!?!)
     unsigned char num_checks; //numero di volte che verifico se il comando+rep_counts è stato ACKnowledgato, altrimenti dichiaro fallito e provo a reinviarlo con rep_counts incrememntato
-    unsigned char addr_to;
+    unsigned char addr_pair;
     unsigned char uart_controller;
 } command_status;
 
-typedef struct Sent_Commands
+typedef struct Commands
 {
     unsigned char num_cmd_under_processing;
     command_status commands_status[NUM_MAX_CMDS];
-} sent_commands;
+} commands;
 
-evento* detect_event(uart_port_t uart_controller, const gpio_num_t* gpio_input_command_pin, sent_commands* my_commands);
-unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, sent_commands* my_commands);
-void clean_processed_cmds(sent_commands* my_commands);
-unsigned char invia_comando(uart_port_t uart_controller, sent_commands* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
+evento* detect_event(uart_port_t uart_controller, const gpio_num_t* gpio_input_command_pin, commands* my_commands, commands* rcv_commands);
+unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, commands* my_commands);
+void clean_processed_cmds(commands* my_commands);
+unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
 //void list_commands_status(commands* my_commands);
-void list_commands_status(sent_commands* my_commands);
-unsigned char manage_cmd_retries(uart_port_t uart_controller, evento* detected_event, sent_commands *my_commands);
+void list_commands_status(commands* my_commands);
+unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento* detected_event, commands *my_commands);
+unsigned char manage_rcvcmds_retries(evento* detected_event, commands *rcv_commands);
+unsigned char is_rcv_a_new_cmd(commands* rcv_commands, evento* last_event); //return 0 if already present; 1 if the event is a new command
