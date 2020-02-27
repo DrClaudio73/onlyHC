@@ -68,6 +68,12 @@ void clean_cmds_list(commands* commands_list){
     return;
 }
 
+unsigned char invia_ack(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, evento* evento){
+    unsigned char cmd_cmdtosend[FIELD_MAX];
+    strcpy2(cmd_cmdtosend,(const unsigned char *) "ACK_");
+    return(invia_comando(uart_controller, my_commands,addr_from,evento->valore_evento.pair_addr,(const unsigned char *) strcat2(cmd_cmdtosend,evento->valore_evento.cmd_received),evento->valore_evento.param_received,evento->valore_evento.ack_rep_counts));
+}
+
 unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, unsigned char addr_pair, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
     unsigned char* msg;
 
@@ -169,7 +175,7 @@ unsigned char manage_rcvcmds_retries(evento* detected_event, commands *rcv_comma
         if(!(rcv_commands->commands_status[i].addr_pair==0xFF)){ //if this cmd is still valid
             if (rcv_commands->commands_status[i].num_checks < NUM_CHECKS_FOR_ALREADY_RECEIVED) { //if it has not yet reached checks attempts
                 rcv_commands->commands_status[i].num_checks++;
-            } else {
+            } else { //I consider that after NUM_CHECKS_FOR_ALREADY_RECEIVED check I should not receive a retry of the same message, so I remove from the check-list
                 rcv_commands->commands_status[i].addr_pair=0xFF;
                 ret=1;
             }
@@ -179,8 +185,8 @@ unsigned char manage_rcvcmds_retries(evento* detected_event, commands *rcv_comma
     return ret;
 }
 
-unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, commands* my_commands){
-    printf("check_rcv_acks():BEGIN\r\n");
+unsigned char check_rcved_acks(evento* detected_event, commands* my_commands){
+    //printf("check_rcv_acks():BEGIN\r\n");
     unsigned char ret = 1;
     unsigned char i=0;
     if (detected_event->type_of_event == RECEIVED_MSG){
@@ -194,16 +200,16 @@ unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_eve
             printf("check_rcv_acks():my_commands->commands_status[%u].param=%s\r\n",i,my_commands->commands_status[i].param);
             printf("check_rcv_acks():detected_event->valore_evento.ack_rep_counts=%u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("check_rcv_acks():my_commands->commands_status[%u].rep_counts=%u\r\n",i,my_commands->commands_status[i].rep_counts);
-            printf("check_rcv_acks():detected_event->valore_evento.pair_addr=%u\r\n",detected_event->valore_evento.pair_addr);
+            printf("check_rcv_acks():.detected_event->valore_eventopair_addr=%u\r\n",detected_event->valore_evento.pair_addr);
             printf("check_rcv_acks():my_commands->commands_status[%u].addr_pair=%u\r\n",i,my_commands->commands_status[i].addr_pair);
-            printf("check_rcv_acks():uart_controller=%u\r\n",uart_controller);
+            printf("check_rcv_acks():uart_controller=%u\r\n",detected_event->valore_evento.uart_controller);
             printf("check_rcv_acks():my_commands->commands_status[%u].uart_controller=%u\r\n",i,my_commands->commands_status[i].uart_controller);
                         
             if((strcmpACK(detected_event->valore_evento.cmd_received,my_commands->commands_status[i].cmd)==0)&&
                 (strcmp2(detected_event->valore_evento.param_received,my_commands->commands_status[i].param)==0)&&
-                (detected_event->valore_evento.ack_rep_counts==my_commands->commands_status[i].rep_counts)&&
-                (detected_event->valore_evento.pair_addr==my_commands->commands_status[i].addr_pair)&&
-                (uart_controller==my_commands->commands_status[i].uart_controller)
+                (detected_event->valore_evento.ack_rep_counts==my_commands->commands_status[i].rep_counts)&& //sicuro che convenga lasciarlo??
+                (detected_event->valore_evento.pair_addr==my_commands->commands_status[i].addr_pair)&& 
+                (detected_event->valore_evento.uart_controller==my_commands->commands_status[i].uart_controller) //da togliere??
                 ){
                     ret=0; //ACK_RECEIVED
                     detected_event->type_of_event=RECEIVED_ACK; //FORSE DA SPOSTARE FUORI
@@ -331,7 +337,7 @@ evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input
     //- I have not received anyhting (e.g. not a message nor an input command) OR
     //- the received MSG is NOT an ACK
     //then I have to manage the retries looking for a FAIL_TO_SEND_CMD event
-    check_rcved_acks(uart_controller, &detected_event, my_commands);
+    check_rcved_acks(&detected_event, my_commands);
     if (detected_event.type_of_event==NOTHING) {
         //if I call this then I have not yet found an event (neither an input_cmd nor a message nor an ACK) 
         //so I am 

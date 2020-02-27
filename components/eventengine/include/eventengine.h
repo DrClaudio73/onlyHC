@@ -20,8 +20,8 @@
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 
 //#define DEVOPS_THIS_IS_STATION_MASTER
-#define DEVOPS_THIS_IS_STATION_SLAVE
-//#define DEVOPS_THIS_IS_STATION_MOBILE
+//#define DEVOPS_THIS_IS_STATION_SLAVE
+#define DEVOPS_THIS_IS_STATION_MOBILE
 
 #ifdef DEVOPS_THIS_IS_STATION_MASTER
 #define STATION_ROLE STATIONMASTER
@@ -115,9 +115,10 @@ typedef struct Commands
 } commands;
 
 evento* detect_event(uart_port_t uart_controller, const gpio_num_t* gpio_input_command_pin, commands* my_commands, commands* rcv_commands);
-unsigned char check_rcved_acks(uart_port_t uart_controller, evento* detected_event, commands* my_commands);
+unsigned char check_rcved_acks(evento* detected_event, commands* my_commands);
 void clean_processed_cmds(commands* my_commands);
 unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
+unsigned char invia_ack(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, evento* evento);
 //void list_commands_status(commands* my_commands);
 void list_commands_status(commands* my_commands);
 unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento* detected_event, commands *my_commands);
