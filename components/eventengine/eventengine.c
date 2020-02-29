@@ -9,7 +9,7 @@
 
 static const char *TAG = "EventE";
 
-void list_commands_status(commands* my_commands){
+void list_commands_status(commands_t* my_commands){
     unsigned char i=0;
     /////REPORT commands_status[] BEFORE processing
     if (my_commands->num_cmd_under_processing == 0) {
@@ -27,7 +27,7 @@ void list_commands_status(commands* my_commands){
     return;
 }
 
-void clean_cmds_list(commands* commands_list){
+void clean_cmds_list(commands_t* commands_list){
     printf("clean_cmds_list(): BEFORE PROCESSING\r\n");
     list_commands_status(commands_list);
 
@@ -68,13 +68,13 @@ void clean_cmds_list(commands* commands_list){
     return;
 }
 
-unsigned char invia_ack(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, evento* evento){
+unsigned char invia_ack(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, evento_t* evento){
     unsigned char cmd_cmdtosend[FIELD_MAX];
     strcpy2(cmd_cmdtosend,(const unsigned char *) "ACK_");
     return(invia_comando(uart_controller, my_commands,addr_from,evento->valore_evento.pair_addr,(const unsigned char *) strcat2(cmd_cmdtosend,evento->valore_evento.cmd_received),evento->valore_evento.param_received,evento->valore_evento.ack_rep_counts));
 }
 
-unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, unsigned char addr_from, unsigned char addr_pair, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
+unsigned char invia_comando(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, unsigned char addr_pair, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
     unsigned char* msg;
 
     printf("invia_comando():uart_controller: %u\r\n",uart_controller);
@@ -122,7 +122,7 @@ unsigned char invia_comando(uart_port_t uart_controller, commands* my_commands, 
     return 0;
 }
 
-unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento* detected_event, commands *my_commands){
+unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento_t* detected_event, commands_t* my_commands){
     unsigned char ret = 0;
     unsigned char i=0;
     printf("manage_issuedcmd_retries():BEGIN\r\n");
@@ -160,15 +160,11 @@ unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento* dete
     return ret;
 }
 
-unsigned char manage_rcvcmds_retries(evento* detected_event, commands *rcv_commands){
+unsigned char manage_rcvcmds_retries(commands_t* rcv_commands){
     //here detected_event is considered only for debugging purpose. Consider removing it.
     unsigned char ret = 0;
     unsigned char i=0;
     printf("manage_rcvcmds_retries():BEGIN\r\n");
-    printf("manage_rcvcmds_retries():type of event = %u \r\n",detected_event->type_of_event);
-    if (!(detected_event->type_of_event==NOTHING)){
-        ESP_LOGW(TAG,"manage_rcvcmds_retries():THIS SHOULD NOT HAPPEN\r\n");
-    }
     //Managing retries of issued commands
     i=0;
     while (i<rcv_commands->num_cmd_under_processing){
@@ -185,7 +181,7 @@ unsigned char manage_rcvcmds_retries(evento* detected_event, commands *rcv_comma
     return ret;
 }
 
-unsigned char check_rcved_acks(evento* detected_event, commands* my_commands){
+unsigned char check_rcved_acks(evento_t* detected_event, commands_t* my_commands){
     //printf("check_rcv_acks():BEGIN\r\n");
     unsigned char ret = 1;
     unsigned char i=0;
@@ -224,12 +220,12 @@ unsigned char check_rcved_acks(evento* detected_event, commands* my_commands){
     return ret;
 }
 
-evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, commands* my_commands, commands* rcv_commands){
+evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, commands_t* my_commands, commands_t* rcv_commands){
     printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
     clean_cmds_list(my_commands);
     clean_cmds_list(rcv_commands);
 
-    static evento detected_event;
+    static evento_t detected_event;
     unsigned char IN[NUM_HANDLED_INPUTS];
     static unsigned char IN_PREC[NUM_HANDLED_INPUTS];
     
@@ -240,7 +236,7 @@ evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN[0])); //echoes PIN1 on OK_GPIO led
     //ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, (uint32_t) (1-IN[0]))); //echoes PIN1 on OK_GPIO led
 
-    //Reset event variable
+    //Initialize event variable 
     detected_event.type_of_event = NOTHING;
     detected_event.valore_evento.input_number = 0;
     detected_event.valore_evento.value_of_input = 0;
@@ -253,7 +249,7 @@ evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input
     //Detect if IO_INPUT went low 
     for (int i=0; i<sizeof(IN) ; i++){
         printf("i=%u, sizeof(IN)=%u\r\n",i,sizeof(IN));
-        if (!(IN[i]==IN_PREC[i])){
+        if (!(IN[i]==IN_PREC[i])){ //if IN[i] went low then an event occurred
             detected_event.type_of_event = IO_INPUT_ACTIVE;
             printf("detectEvent(): IN[%u]: %u ; IN_PREC[%u]: %u\r\n",i,IN[i],i,IN_PREC[i]);
             printf("detectEvent(): !!!!!!! IO Input Event Occurred !!!!!!!\r\n");
@@ -270,7 +266,7 @@ evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input
         IN_PREC[i]=IN[i];
     }
 
-    //Detect if a message has been received from any station reading data from the uart controller
+    //Detect if a message has been received from any station reading data from the UART controller
     unsigned char *line1;
     line1 = read_line(uart_controller);
     printf("detect_event(): line read from UART%u: ",uart_controller);
@@ -334,15 +330,15 @@ evento* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input
         station_iter++;
     }
     //before return check if:
-    //- I have not received anyhting (e.g. not a message nor an input command) OR
+    //- I have not received anyhting (e.g. neither a message nor an input command) OR
     //- the received MSG is NOT an ACK
     //then I have to manage the retries looking for a FAIL_TO_SEND_CMD event
     check_rcved_acks(&detected_event, my_commands);
     if (detected_event.type_of_event==NOTHING) {
-        //if I call this then I have not yet found an event (neither an input_cmd nor a message nor an ACK) 
-        //so I am 
+        //if I call this then I have not yet found an actual event (neither an IO input_cmd nor a message nor an ACK) 
+        //so I am incrementing checks number
         manage_issuedcmd_retries(uart_controller,&detected_event, my_commands);
-        manage_rcvcmds_retries(&detected_event, rcv_commands);
+        manage_rcvcmds_retries(rcv_commands);
     }
 
     return &detected_event;

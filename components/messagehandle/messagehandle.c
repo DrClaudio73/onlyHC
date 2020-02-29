@@ -39,8 +39,7 @@ void pack_num(unsigned char* msg_to_send, unsigned char valore, unsigned char* k
 
 unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts) {
     static unsigned char msg_to_send[LINE_MAX];
-
-    memset(msg_to_send,0,255);
+    //build message
 
     //Frame structure
     //CMD: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
@@ -48,15 +47,28 @@ unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const un
     //CRC is evaluated starting at ADDDR_FROM up to PARAM
     
     //SUPPORTED CMDs:
-    //---APRI+PARAM=XXXX
-    //---REPORT+PARAM=SPECIFIC to be implemented 
+    //---APRI+PARAM=XXXX (opens something), in reply PARAM is EQUAL TO WHAT RECEIVED
+    //---REPORT+PARAM=SPECIFIC to be implemented,  ), in reply PARAM is DEFINED HERE BELOW
     //---REPORT+PARAM=ALL      to be implemented
     //SUPPORTED REPLIES:
     //---ACK_APRI+RCV_PARAM+RCV_REP_COUNTS
     //---ACK_REPORT+PARAM=SPECIFIC  to be implemented
     //---ACK_REPORT+PARAM=ALL   to be implemented, in this case an handshake to trasnfer N items in transaction should be implemented
 
-    //build message
+    //IN CASE CMD="REPORT" THIS DEFINE REPLY "PARAM" STRUCTURE
+    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    //CONTENT OF "PARAM" IN RCVED "CMD" FIELD ---- REPLY CONTENT IN "PARAM" FIELD
+    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    //(1) DATE                                ---- AAAAMMGG (ASCII)
+    //(2) HOUR                                ---- HHMMSS (ASCII)
+    //(3) TIME                                ---- AAAAMMGGHHMMSS
+    //(4) NUM_APRI_RCVED                      ---- OOO (HEX CODING 3 BYTES)
+    //...........
+    //(5) NUM_TOTALCMDS_RCVED                 ---- CCC (HEX CODING 3 BYTES)
+    //...........
+    //(6) ALL                                 ---- AAAAMMGGHHMMSSOOOCCC 
+
+    memset(msg_to_send,0,255);
     int totale = 0;
     unsigned char k=0;
     msg_to_send[k++]='B'; //for synch purpose
