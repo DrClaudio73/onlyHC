@@ -1,0 +1,25 @@
+menu "HTTP server configuration"
+
+	config ESP_WIFI_SSID
+		string "WIFI ESP AP Network SSID"
+		help
+			Enter the SSID of the wifi network
+
+	config ESP_WIFI_PASSWORD
+		string "WIFI ESP AP Network Password"
+		help
+			Enter the password of the ESP AP wifi network
+
+	config ESP_MAX_STA_CONN
+		int "Max Number of Connected Stations"
+		default 4
+		help
+			Max STATIONS accepted (Max 4).
+
+	config EXAMPLE_CONNECT_WIFI
+		bool "Connect using WiFi"
+        default 1
+		help
+			Alternative to Ethernet?	
+            
+endmenu

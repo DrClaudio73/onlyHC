@@ -38,9 +38,13 @@ int checkStatus() { // CHECK STATUS FOR RINGING or IN CALL
 #include "messagehandle.h"
 #include "auxiliaryfuncs.h"
 #include "eventengine.h"
+#include "miohttpd.h"
 #include <time.h>
 #include <sys/time.h>
 
+#include <nvs_flash.h>
+#include <sys/param.h>
+#include "nvs_flash.h"
 
 #ifdef DEVOPS_THIS_IS_STATION_SLAVE
 #include "sntp/sntp.h"
@@ -653,9 +657,22 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
 
 // Main application
 void app_main() {
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+    httpd_app_main();
+
+
     static commands_t my_commands;
     static commands_t rcv_commands;
     static miodb_t db;
+
     setup(&my_commands,&rcv_commands, &db);
     xTaskCreate(&timeout_task, "timeout_task", 2048, NULL, 5, NULL);
 
