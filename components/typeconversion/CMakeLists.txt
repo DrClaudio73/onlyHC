@@ -1,4 +1,3 @@
-set(COMPONENT_SRCS "typeconv.c")
-set(COMPONENT_ADD_INCLUDEDIRS "./include")
+idf_component_register(SRCS "typeconv.c"
+INCLUDE_DIRS "./include")
 
-register_component()

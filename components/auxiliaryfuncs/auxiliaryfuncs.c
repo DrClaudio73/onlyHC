@@ -32,7 +32,7 @@ void setupmyRadioHC12(void) {
     // - CHANNEL 0X01
     // - FU FU3
     // - POWER +20dBm
-    // ARE ALREADY SET UP INTO HC12 MODULE 
+    // ARE ALREADY SET UP INTO HC12 MODULE
     return;
 }
 ////////////////////////////////////////////// AUXILIARY FUNCTIONS //////////////////////////////////////////////
@@ -55,6 +55,5 @@ void presentBlink(unsigned char LedPinNo, unsigned char num_pres_blinks){
         vTaskDelay(50 / portTICK_RATE_MS);
         gpio_set_level((gpio_num_t) LedPinNo, 0);
         vTaskDelay(50 / portTICK_RATE_MS);
-    }   
+    }
 }
-

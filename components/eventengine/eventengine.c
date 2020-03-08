@@ -9,27 +9,60 @@
 
 static const char *TAG = "EventE";
 
-void list_commands_status(commands_t* my_commands){
+unsigned char is_rcv_a_new_cmd(commands_t* rcv_commands, evento_t* last_event){ //return 0 if already present; 1 if the event is a new command
+    //if this command is the first of the repetition and is not an ACK (so it is an actually new command)
+    //I am inserting this new command in commands_status array to be tracked
+    //I also accept a command if the received repetition count is less then of what I have previously received
+    unsigned char already_rcv=0;
+    if (!(strncmp2(last_event->valore_evento.cmd_received,(const unsigned char*) "ACK",3)==0)){ //this is only a safeguard I am not considering ACKs
+        for (int i=0;i<rcv_commands->num_cmd_under_processing;i++){
+            if ( (strncmp2(rcv_commands->commands_status[i].cmd,last_event->valore_evento.cmd_received,strlen2(last_event->valore_evento.cmd_received))==0)&&
+                 (strncmp2(rcv_commands->commands_status[i].param,last_event->valore_evento.param_received,strlen2(last_event->valore_evento.param_received))==0)&&
+                 (rcv_commands->commands_status[i].addr_pair==last_event->valore_evento.pair_addr)//&& se togli questo ti levi il problema che potresti aver ricevuto un comando doppio perchè forwardato
+                 //(rcv_commands->commands_status[i].rep_counts < last_event->valore_evento.ack_rep_counts ) //this last '&&' condition is for accepting commands with lower repetition counts: this means that the command has been volontarily re-issued 
+                 ) {
+                already_rcv=1;
+                printf("is_rcv_a_new_cmd(): This is an already received command discarding it: cmd: \"%s\"\n prm: %s\n rep counts:%u\n pair_addr: %u\n uart: %u\r\n", last_event->valore_evento.cmd_received, 
+                last_event->valore_evento.param_received, last_event->valore_evento.ack_rep_counts, last_event->valore_evento.pair_addr, last_event->valore_evento.uart_controller);
+                vTaskDelay(500/portTICK_RATE_MS);
+            }
+        }
+        if (!already_rcv){
+            printf("is_rcv_a_new_cmd(): This is an actual NEW command inserting in commands_received list: ^%s^\n", last_event->valore_evento.cmd_received);
+            vTaskDelay(500/portTICK_RATE_MS);
+            strcpy2(rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].cmd, last_event->valore_evento.cmd_received);
+            strcpy2(rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].param,last_event->valore_evento.param_received);
+            rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].rep_counts=last_event->valore_evento.ack_rep_counts;
+            rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].num_checks=0; 
+            rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].addr_pair=last_event->valore_evento.pair_addr;
+            rcv_commands->commands_status[rcv_commands->num_cmd_under_processing].uart_controller=last_event->valore_evento.uart_controller;
+            rcv_commands->num_cmd_under_processing++;
+        }
+    }
+    return (1-already_rcv);
+}
+
+void list_commands_status(commands_t* my_commands, char* name){
     unsigned char i=0;
     /////REPORT commands_status[] BEFORE processing
     if (my_commands->num_cmd_under_processing == 0) {
         printf("clean_acknowledged_cmds():commands_status is empty\r\n");
     }
     while (i<my_commands->num_cmd_under_processing){
-        printf("list_commands_status(): my_commands.commands_status[%u].cmd: %s\r\n",i,my_commands->commands_status[i].cmd);
-        printf("list_commands_status(): my_commands.commands_status[%u].param: %s\r\n",i,my_commands->commands_status[i].param);
-        printf("list_commands_status(): my_commands.commands_status[%u].rep_counts: %u\r\n",i,my_commands->commands_status[i].rep_counts);
-        printf("list_commands_status(): my_commands.commands_status[%u].num_checks: %u\r\n",i,my_commands->commands_status[i].num_checks);
-        printf("list_commands_status(): my_commands.commands_status[%u].addr_pair: %u\r\n",i,my_commands->commands_status[i].addr_pair);
-        printf("list_commands_status(): my_commands.commands_status[%u].uart_controller: %u\r\n",i,my_commands->commands_status[i].uart_controller);
+        printf("list_commands_status(): %s.commands_status[%u].cmd: %s\r\n",name,i,my_commands->commands_status[i].cmd);
+        printf("list_commands_status(): %s.commands_status[%u].param: %s\r\n",name,i,my_commands->commands_status[i].param);
+        printf("list_commands_status(): %s.commands_status[%u].rep_counts: %u\r\n",name,i,my_commands->commands_status[i].rep_counts);
+        printf("list_commands_status(): %s.commands_status[%u].num_checks: %u\r\n",name,i,my_commands->commands_status[i].num_checks);
+        printf("list_commands_status(): %s.commands_status[%u].addr_pair: %u\r\n",name,i,my_commands->commands_status[i].addr_pair);
+        printf("list_commands_status(): %s.commands_status[%u].uart_controller: %u\r\n",name,i,my_commands->commands_status[i].uart_controller);
         i++;
     }
     return;
 }
 
-void clean_cmds_list(commands_t* commands_list){
+void clean_cmds_list(commands_t* commands_list, char* name){
     printf("clean_cmds_list(): BEFORE PROCESSING\r\n");
-    list_commands_status(commands_list);
+    list_commands_status(commands_list,name);
 
     //clean commands_status array from empty cells
     /////processing commands_status[]
@@ -49,7 +82,7 @@ void clean_cmds_list(commands_t* commands_list){
                 j++;
             }
             commands_list->num_cmd_under_processing--;
-            printf("clean_cmds_list(): commands_list->num_cmd_under_processing: %u\r\n",commands_list->num_cmd_under_processing);
+            printf("clean_cmds_list(): %s->num_cmd_under_processing: %u\r\n",name,commands_list->num_cmd_under_processing);
             memset(commands_list->commands_status[commands_list->num_cmd_under_processing].cmd,0,sizeof(commands_list->commands_status[i].cmd));
             memset(commands_list->commands_status[commands_list->num_cmd_under_processing].param,0,sizeof(commands_list->commands_status[i].param));
             commands_list->commands_status[commands_list->num_cmd_under_processing].rep_counts=0;
@@ -64,14 +97,8 @@ void clean_cmds_list(commands_t* commands_list){
 
     /////REPORT commands_status[] AFTER processing
     printf("clean_cmds_list(): AFTER PROCESSING\r\n");
-    list_commands_status(commands_list);
+    list_commands_status(commands_list,name);
     return;
-}
-
-unsigned char invia_ack(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, evento_t* evento){
-    unsigned char cmd_cmdtosend[FIELD_MAX];
-    strcpy2(cmd_cmdtosend,(const unsigned char *) "ACK_");
-    return(invia_comando(uart_controller, my_commands,addr_from,evento->valore_evento.pair_addr,(const unsigned char *) strcat2(cmd_cmdtosend,evento->valore_evento.cmd_received),evento->valore_evento.param_received,evento->valore_evento.ack_rep_counts));
 }
 
 unsigned char invia_comando(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, unsigned char addr_pair, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts){
@@ -120,6 +147,12 @@ unsigned char invia_comando(uart_port_t uart_controller, commands_t* my_commands
     }
 
     return 0;
+}
+
+unsigned char invia_ack(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, evento_t* evento){
+    unsigned char cmd_cmdtosend[FIELD_MAX];
+    strcpy2(cmd_cmdtosend,(const unsigned char *) "ACK_");
+    return(invia_comando(uart_controller, my_commands,addr_from,evento->valore_evento.pair_addr,(const unsigned char *) strcat2(cmd_cmdtosend,evento->valore_evento.cmd_received),evento->valore_evento.param_received,evento->valore_evento.ack_rep_counts));
 }
 
 unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento_t* detected_event, commands_t* my_commands){
@@ -222,8 +255,8 @@ unsigned char check_rcved_acks(evento_t* detected_event, commands_t* my_commands
 
 evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, commands_t* my_commands, commands_t* rcv_commands){
     printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
-    clean_cmds_list(my_commands);
-    clean_cmds_list(rcv_commands);
+    clean_cmds_list(my_commands,"my_commands");
+    clean_cmds_list(rcv_commands,"rcv_commands");
 
     static evento_t detected_event;
     unsigned char IN[NUM_HANDLED_INPUTS];
@@ -231,7 +264,7 @@ evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_inp
     
     for (int i=0; i<sizeof(IN); i++ )  {
         IN[i] = (unsigned char) gpio_get_level(mygpio_input_command_pin[i]);
-        printf("IN[%u] =%u; gpio_input_command_pin[%u]=%u\r\n",i,IN[i],i,(unsigned char)mygpio_input_command_pin[i]);
+        //printf("IN[%u] =%u; gpio_input_command_pin[%u]=%u\r\n",i,IN[i],i,(unsigned char)mygpio_input_command_pin[i]);
     }
     ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)BLINK_GPIO, (uint32_t) IN[0])); //echoes PIN1 on OK_GPIO led
     //ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)NOK_GPIO, (uint32_t) (1-IN[0]))); //echoes PIN1 on OK_GPIO led

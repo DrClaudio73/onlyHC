@@ -116,11 +116,10 @@ typedef struct Commands
 
 evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* gpio_input_command_pin, commands_t* my_commands, commands_t* rcv_commands);
 unsigned char check_rcved_acks(evento_t* detected_event, commands_t* my_commands);
-void clean_processed_cmds(commands_t* my_commands);
+void clean_cmds_list(commands_t* my_commands,char* name);
 unsigned char invia_comando(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, unsigned char addr_to, const unsigned char* cmd, const unsigned char* param, unsigned char rep_counts);
 unsigned char invia_ack(uart_port_t uart_controller, commands_t* my_commands, unsigned char addr_from, evento_t* evento);
-//void list_commands_status(commands* my_commands);
-void list_commands_status(commands_t* my_commands);
+void list_commands_status(commands_t* my_commands,char* name);
 unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento_t* detected_event, commands_t* my_commands);
 unsigned char manage_rcvcmds_retries(commands_t* rcv_commands);
 unsigned char is_rcv_a_new_cmd(commands_t* rcv_commands, evento_t* last_event); //return 0 if already present; 1 if the event is a new command

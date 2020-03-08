@@ -47,26 +47,27 @@ unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const un
     //CRC is evaluated starting at ADDDR_FROM up to PARAM
     
     //SUPPORTED CMDs:
-    //---APRI+PARAM=XXXX (opens something), in reply PARAM is EQUAL TO WHAT RECEIVED
-    //---REPORT+PARAM=SPECIFIC to be implemented,  ), in reply PARAM is DEFINED HERE BELOW
-    //---REPORT+PARAM=ALL      to be implemented
+    //---CMD=APRI+PARAM=XXXX (opens something), in reply PARAM is EQUAL TO WHAT RECEIVED
+    //---CMD=RPT+PARAM=SPECIFIC to be implemented,  ), in reply PARAM is DEFINED HERE BELOW
+    //---CMD=RPT+PARAM=ALL      to be implemented
     //SUPPORTED REPLIES:
-    //---ACK_APRI+RCV_PARAM+RCV_REP_COUNTS
-    //---ACK_REPORT+PARAM=SPECIFIC  to be implemented
-    //---ACK_REPORT+PARAM=ALL   to be implemented, in this case an handshake to trasnfer N items in transaction should be implemented
+    //---CMD=ACK_APRI+RCV_PARAM+RCV_REP_COUNTS
+    //---CMD=ACK_RPT+PARAM=SPECIFIC+RCV_REP_COUNTS  to be implemented
+    //---CMD=ACK_RPT+PARAM=ALL+RCV_REP_COUNTS   to be implemented, in this case an handshake to trasnfer N items in transaction should be implemented
 
-    //IN CASE CMD="REPORT" THIS DEFINE REPLY "PARAM" STRUCTURE
-    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    //CONTENT OF "PARAM" IN RCVED "CMD" FIELD ---- REPLY CONTENT IN "PARAM" FIELD
-    //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    //IN CASE CMD="RPT" (aka REPORT) THIS DEFINES REPLY "PARAM" STRUCTURE
+    //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    //CONTENT OF "PARAM" FIELD IN RCVED FRAME ---- CONTENT OF "PARAM" FIELD IN REPLY FRAME
+    //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     //(1) DATE                                ---- AAAAMMGG (ASCII)
     //(2) HOUR                                ---- HHMMSS (ASCII)
-    //(3) TIME                                ---- AAAAMMGGHHMMSS
+    //(3) TIME                                ---- AAAAMMGGHHMMSS (ASCII)
     //(4) NUM_APRI_RCVED                      ---- OOO (HEX CODING 3 BYTES)
-    //...........
     //(5) NUM_TOTALCMDS_RCVED                 ---- CCC (HEX CODING 3 BYTES)
     //...........
-    //(6) ALL                                 ---- AAAAMMGGHHMMSSOOOCCC 
+    //...........
+    //...........
+    //(15) ALL                                ---- AAAAMMGGHHMMSSOOOCCC 
 
     memset(msg_to_send,0,255);
     int totale = 0;
