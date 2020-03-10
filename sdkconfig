@@ -113,10 +113,16 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Master Station Main Configuration
+# Only HC12 Main Configuration
 #
 CONFIG_TIMEOUT=3500
 CONFIG_ON_COMMAND_LENGTH=550
+CONFIG_NUM_PRES_BLINKS=3
+# end of Only HC12 Main Configuration
+
+#
+# Auxiliary functions configuration menu
+#
 CONFIG_MASTER_INPUT_COMMAND_PIN_UNO=4
 CONFIG_MASTER_INPUT_COMMAND_PIN_DUE=5
 CONFIG_MASTER_BLINK_GPIO=2
@@ -144,15 +150,19 @@ CONFIG_BAUDTRANS2400=y
 # CONFIG_BAUDTRANS38400 is not set
 # CONFIG_BAUDTRANS57600 is not set
 # CONFIG_BAUDTRANS115200 is not set
+# end of Auxiliary functions configuration menu
+
+#
+# Events Handler configuration
+#
 CONFIG_ROLEMASTER=y
 # CONFIG_ROLESLAVE is not set
 # CONFIG_ROLEMOBILE is not set
 CONFIG_ADDR_MASTER_STATION=1
 CONFIG_ADDR_SLAVE_STATION=2
 CONFIG_ADDR_MOBILE_STATION=3
-CONFIG_NUM_PRES_BLINKS=3
 CONFIG_MIODEBUG=0
-# end of Master Station Main Configuration
+# end of Events Handler configuration
 
 #
 # HTTP server configuration

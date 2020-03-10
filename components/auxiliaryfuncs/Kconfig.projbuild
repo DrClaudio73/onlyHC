@@ -1,0 +1,230 @@
+menu "Auxiliary functions configuration menu"
+
+config MASTER_INPUT_COMMAND_PIN_UNO
+    int "Master station First GPIO number for giving input command"
+	range 0 34
+	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_INPUT_COMMAND_PIN_DUE
+    int "Master station: Second GPIO number for giving input command"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_BLINK_GPIO
+    int "Master station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_GPIO_OK
+    int "Master station OK GPIO number"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MASTER_GPIO_NOK
+    int "Master station NOT OK GPIO number"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_INPUT_COMMAND_PIN_UNO
+    int "Mobile station First GPIO number for giving input command"
+	range 0 34
+	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_INPUT_COMMAND_PIN_DUE
+    int "Mobile station: Second GPIO number for giving input command"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_BLINK_GPIO
+    int "Mobile station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_GPIO_OK
+    int "Mobile station OK GPIO number"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config MOBILE_GPIO_NOK
+    int "Mobile station NOT OK GPIO number"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_INPUT_COMMAND_PIN_UNO
+    int "Slave station First GPIO number for giving input command"
+	range 0 34
+	default 4
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_INPUT_COMMAND_PIN_DUE
+    int "Slave station: Second GPIO number for giving input command"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to input command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_BLINK_GPIO
+    int "Slave station Blink GPIO number"
+range 0 34
+	default 2
+	help
+		GPIO number (IOxx) to blink on-off
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_GARAGE_CMD_GPIO
+    int "Slave station GARAGE command OUTPUT GPIO number (ACTUATOR)"
+	range 0 34
+	default 16
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_BIGGATE_CMD_GPIO
+    int "Slave station BIGGATE command OUTPUT GPIO number (ACTUATOR)"
+	range 0 34
+	default 17
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config HC12SETGPIO
+    int "GPIO number for HC12 module SET pin"
+	range 0 34
+	default 5
+	help
+		GPIO number (IOxx) to blink on and off (is the GPIO connected to SET pin of HC12)
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config HC12TXGPIO
+    int "GPIO number for USART HC12 TX"
+	range 0 34
+	default 18
+	help
+		GPIO number (IOxx) to receive from HC12 (is the GPIO connected to TX of HC12)
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config HC12RXGPIO
+    int "GPIO number for USART HC12 RX"
+	range 0 34
+	default 19
+	help
+		GPIO number (IOxx) to trasnmit to HC12 (is the GPIO connected to RX of HC12)
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config CH_NO_HC12
+    hex "Channel Number HC12"
+	default 0x01
+	help
+		Channel Number HC12 to exhcange data with slave station.
+
+choice TRANSPARENTMODEBAUDHC12
+		prompt "Baud rate in transparent mode to remote station"
+		default BAUDTRANS2400
+		help
+			Select Baud rate for transparent trasnmit mode
+		config BAUDTRANS1200
+			bool "1200"
+		config BAUDTRANS2400
+			bool "2400"
+		config BAUDTRANS4800
+			bool "4800"
+		config BAUDTRANS9600
+			bool "9600"		
+		config BAUDTRANS19200
+			bool "19200"
+		config BAUDTRANS38400
+			bool "38400"
+		config BAUDTRANS57600
+			bool "57600"
+		config BAUDTRANS115200
+			bool "115200"
+endchoice
+
+endmenu
