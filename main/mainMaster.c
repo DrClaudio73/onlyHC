@@ -57,10 +57,12 @@ const int TRIGGERED = BIT0;
 static const char *TAG1 = "OnlyHC12App";
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void stampa_db(miodb_t* db){
+    printf("*******\r\n");
     printf("DATA= %s\r\n",db->DATA);
     printf("ORA = %s\r\n",db->ORA);
     printf("num_APRI_received = %u\r\n",db->num_APRI_received);
     printf("num_TOT_received = %u\r\n",db->num_TOT_received);    
+    printf("*******\r\n");
 }
 
 void print_struct_tm(char* tag, struct tm* t){
@@ -309,7 +311,7 @@ void setup(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
     printf("retCode clock_gettime: %d\r\n",clock_gettime(CLOCK_REALTIME,&res));
     printf("res.tv_sec: %ld\r\n",res.tv_sec);
     printf("res.tv_nsec: %ld\r\n",res.tv_nsec);
-    res.tv_sec+=1582993665;
+    res.tv_sec+=1583819573;
     printf("retCode clock_gettime: %d\r\n",clock_settime(CLOCK_REALTIME,&res));
     printf("res.tv_sec: %ld\r\n",res.tv_sec);
     printf("res.tv_nsec: %ld\r\n",res.tv_nsec);
@@ -350,8 +352,6 @@ void setup(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
     //do something only for STATIONSLAVE
     strftime((char*)db->DATA,sizeof(db->DATA),"%Y%m%d", &timeinfo);
     strftime((char*)db->ORA,sizeof(db->ORA),"%H%M%S", &timeinfo);
-    //strcpy2(db->DATA,(unsigned char*) "20200229");
-    //strcpy2(db->ORA,(unsigned char*)"1200");
     db->num_APRI_received=0;
     db->num_TOT_received=0;
     #else
@@ -422,7 +422,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
 	strftime(buffer, sizeof(buffer), "%c", &timeinfo);
     ESP_LOGI(TAG1, "The current date/time in Italy is: %s", buffer);
 
-    //PER INVIARE I VALORI NUMERICI CON IL PROTOCOLLO CHE TI SEI SCELTO DEVI USAARE
+    //PER INVIARE I VALORI NUMERICI CON IL PROTOCOLLO CHE TI SEI SCELTO DEVI USARE
     //sprintf(param,"val[%d]=%2hhX\n", i, ptr[i]);
     //COME NEI TEST DELLA ENDIANNESS
 
@@ -439,6 +439,8 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
     for(unsigned char l=0;l<NUM_HANDLED_INPUTS;l++){
         printf("loop(): miogpio_input_command_pin[%u]: %u\r\n",l,(unsigned char) miogpio_input_command_pin[l]);
     }
+
+    stampa_db(db);
 
     //Listening for any event to occour
     detected_event=detect_event(UART_NUM_2, miogpio_input_command_pin, my_commands, rcv_commands);
@@ -476,10 +478,19 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                     strcpy2(cmd_param,(const unsigned char*)"TIME");
                     break;
 
+                case 3:
+                    /* code */
+                    strcpy2(cmd_param,(const unsigned char*)"NUM_APRI_RCVED");
+                    break;
+
+                case 4:
+                    /* code */
+                    strcpy2(cmd_param,(const unsigned char*)"NUM_TOTALCMDS_RCVED");
+                    break;
                 default:
                     break;
                 }
-                ijk=(ijk+1)%3;
+                ijk=(ijk+1)%5;
                 invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "RPT", (const unsigned char *) cmd_param, 1);
             }
         } else if (detected_event->type_of_event == RECEIVED_MSG) { 
@@ -501,6 +512,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                 } else { //If this is a RESP to a previously issued 'RPT' CMD then for now just print the content
                     printf("received reply to CMD: %s, PARAM_RCV: %s",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                 }
+                vTaskDelay(5000/portTICK_RATE_MS);
             } 
         } else if (detected_event->type_of_event == RECEIVED_ACK) {
             ESP_LOGW(TAG1,"loop(): received and ACK for command:\r\n");
@@ -527,6 +539,12 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
 
     if (STATION_ROLE==STATIONSLAVE){ //BEHAVE AS SLAVE STATION
         printf("\nn######################This is the Slave station######################\n");
+        //updating DB wall clock
+        time(&now);
+        localtime_r(&now, &timeinfo);
+        strftime((char*)db->DATA,sizeof(db->DATA),"%Y%m%d", &timeinfo);
+        strftime((char*)db->ORA,sizeof(db->ORA),"%H%M%S", &timeinfo);
+
         if (detected_event->type_of_event == RECEIVED_MSG) { 
             ESP_LOGW(TAG1,"loop(): This was the msg for me:\r\n");
             printf("loop():cmd_received: %s\r\n",detected_event->valore_evento.cmd_received);
@@ -534,7 +552,6 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
             printf("loop():ack_rep_counts: %u\r\n",detected_event->valore_evento.ack_rep_counts);
             printf("loop():pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
             
-
             //check if this one is an actual new command and in case I track in the received commands to avoid implementing repetitions
             if (is_rcv_a_new_cmd(rcv_commands,detected_event)){
                 //I am sending ACK to the sending station in any case (i.e. even if a previous repetition of the same command has already been received)
@@ -542,6 +559,8 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                 //I am sending ACK to the sending station
                 //Actuating APRI commands
                 if (strncmp2(detected_event->valore_evento.cmd_received,(const unsigned char *) "APRI",strlen("APRI"))==0){
+                    db->num_APRI_received++;
+                    db->num_TOT_received++;
                     if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "0", 1)==0){
                         printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         vTaskDelay(2500/portTICK_RATE_MS);
@@ -570,6 +589,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                 //REPORT COMMAND HANDLING
                 if (strncmp2(detected_event->valore_evento.cmd_received,(const unsigned char *) "RPT",strlen("RPT"))==0){
                     if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "DATE", strlen("DATE"))==0){
+                        db->num_TOT_received++;
                         printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param,detected_event->valore_evento.param_received,sizeof(cmd_param));
                         strncat2(cmd_param,db->DATA,sizeof(cmd_param));
@@ -577,6 +597,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                         vTaskDelay(500/portTICK_RATE_MS);
                     }     
                     if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "HOUR", strlen("HOUR"))==0){
+                        db->num_TOT_received++;
                         printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param,detected_event->valore_evento.param_received,sizeof(cmd_param));
                         strncat2(cmd_param,db->ORA,sizeof(cmd_param));
@@ -584,10 +605,29 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                         vTaskDelay(500/portTICK_RATE_MS);
                     }
                     if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "TIME", strlen("TIME"))==0){
+                        db->num_TOT_received++;
                         printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param,detected_event->valore_evento.param_received,sizeof(cmd_param));
                         strncat2(cmd_param,db->DATA,sizeof(cmd_param));
                         strncat2(cmd_param,db->ORA,sizeof(cmd_param));
+                        invia_comando(UART_NUM_2,my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param,1);
+                        vTaskDelay(500/portTICK_RATE_MS);
+                    }          
+                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "NUM_APRI_RCVED", strlen("NUM_APRI_RCVED"))==0){
+                        db->num_TOT_received++;
+                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        strncpy2(cmd_param,detected_event->valore_evento.param_received,sizeof(cmd_param));
+                        snprintf((char*)(cmd_param+strlen2(cmd_param)),sizeof(cmd_param)-strlen2(cmd_param),"%3hhX\n",db->num_APRI_received);
+                        //strncat2(cmd_param,db->num_APRI_received,sizeof(cmd_param));
+                        invia_comando(UART_NUM_2,my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param,1);
+                        vTaskDelay(500/portTICK_RATE_MS);
+                    }          
+                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *) "NUM_TOTALCMDS_RCVED", strlen("NUM_TOTALCMDS_RCVED"))==0){
+                        db->num_TOT_received++;
+                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        strncpy2(cmd_param,detected_event->valore_evento.param_received,sizeof(cmd_param));
+                        snprintf((char*)(cmd_param+strlen2(cmd_param)),sizeof(cmd_param)-strlen2(cmd_param),"%3hhX\n",db->num_TOT_received);
+                        //strncat2(cmd_param,db->num_TOT_received,sizeof(cmd_param));
                         invia_comando(UART_NUM_2,my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param,1);
                         vTaskDelay(500/portTICK_RATE_MS);
                     }          

@@ -1,3 +1,4 @@
+#include "tipostazione.h"
 #define NUM_MAX_CMDS 50 //max number of commands to handle
 #define NUM_MAX_RETRIES 5 //numero massimo di volte che provo a riemettere il comando prima di arrendermi
 #define NUM_MAX_CHECKS_FOR_ACK 5 //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
@@ -20,7 +21,7 @@
 enum RoleStation {STATIONMASTER=0, STATIONSLAVE = 1, STATIONMOBILE =2};
 
 //#define DEVOPS_THIS_IS_STATION_MASTER
-#define DEVOPS_THIS_IS_STATION_SLAVE
+//#define DEVOPS_THIS_IS_STATION_SLAVE
 //#define DEVOPS_THIS_IS_STATION_MOBILE
 
 #ifdef DEVOPS_THIS_IS_STATION_MASTER
