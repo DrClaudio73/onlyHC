@@ -10,11 +10,11 @@ PORTA=""
 while getopts BVN01MSL option; do
 case ${option}
 in
-B)  BUILD1="build"; BUILD2=""; BUILD3="" ;;
-V)  BUILD1="monitor"; BUILD2=""; BUILD3="";;
-N)  BUILD1="build"; BUILD2="app-flash"; BUILD3="monitor";;
 0)  PORTA="-p/dev/ttyUSB0";;
 1)  PORTA="-p/dev/ttyUSB1";;
+B)  BUILD1="build"; BUILD2=""; BUILD3=""; PORTA="";;
+V)  BUILD1="monitor"; BUILD2=""; BUILD3="";;
+N)  BUILD1="build"; BUILD2="app-flash"; BUILD3="monitor";;
 M)  STATION="#define DEVOPS_THIS_IS_STATION_MASTER";;
 S)  STATION="#define DEVOPS_THIS_IS_STATION_SLAVE";;
 L)  STATION="#define DEVOPS_THIS_IS_STATION_MOBILE";;
@@ -22,15 +22,12 @@ esac
 done
 
 
-echo "BUILD"
-echo $BUILD
-echo "PORT"
-echo $PORTA
-echo "STATION"
-echo $STATION
+echo "BUILD1: ${BUILD1} BUILD2: ${BUILD2} BUILD3: ${BUILD3}"
+echo "PORT: ${PORTA}"
+echo "STATION: ${STATION}"
 
-echo ${STATION} > "/home/ccattaneo/projects/masterStation/onlyHC12/components/eventengine/include/tipostazione.h"
+echo ${STATION} > "./components/eventengine/include/tipostazione.h"
 
 CMD="/home/ccattaneo/esp/esp-idf/tools/idf.py"
-#"${CMD}" "${BUILD1}"
+echo "${CMD}" "${PORTA}" "${BUILD1}" "${BUILD2}" "${BUILD3}"
 "${CMD}" "${PORTA}" "${BUILD1}" "${BUILD2}" "${BUILD3}"

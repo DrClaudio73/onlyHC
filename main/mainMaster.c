@@ -403,8 +403,9 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
     evento_t* detected_event;
     unsigned char cmd_param[FIELD_MAX];
     memset(cmd_param,0,sizeof(cmd_param));
-    //unsigned char cmd_cmdtosend[FIELD_MAX];
-
+    unsigned char cmd_cmdtosend[FIELD_MAX];
+    memset(cmd_cmdtosend,0,sizeof(cmd_param));
+    
     printf("loop(): *******************************************Entering loop() function!!!!!\r\n");
     time_t now;
 	struct tm timeinfo;
@@ -464,34 +465,44 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                 switch (ijk)
                 {
                 case 0:
-                    /* code */
-                    strcpy2(cmd_param,(const unsigned char*)"DATE");
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "APRI");
+                    sprintf((char *)cmd_param,"%d",detected_event->valore_evento.input_number);
                     break;
                 
                 case 1:
-                    /* code */
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "APRI");
+                    sprintf((char *)cmd_param,"%d",detected_event->valore_evento.input_number+1); //to avoid having to change the connected input for debug purpose
+                    break;
+                
+                case 2:
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "RPT");
+                    strcpy2(cmd_param,(const unsigned char*)"DATE");
+                    break;
+                
+                case 3:
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "RPT");
                     strcpy2(cmd_param,(const unsigned char*)"HOUR");
                     break;
 
-                case 2:
-                    /* code */
+                case 4:
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "RPT");
                     strcpy2(cmd_param,(const unsigned char*)"TIME");
                     break;
 
-                case 3:
-                    /* code */
-                    strcpy2(cmd_param,(const unsigned char*)"NUM_APRI_RCVED");
+                case 5:
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "RPT");
+                    strcpy2(cmd_param,(const unsigned char*) "NUM_APRI_RCVED");
                     break;
 
-                case 4:
-                    /* code */
-                    strcpy2(cmd_param,(const unsigned char*)"NUM_TOTALCMDS_RCVED");
+                case 6:
+                    strcpy2(cmd_cmdtosend,(const unsigned char*) "RPT");
+                    strcpy2(cmd_param,(const unsigned char*) "NUM_TOTALCMDS_RCVED");
                     break;
                 default:
                     break;
                 }
-                ijk=(ijk+1)%5;
-                invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "RPT", (const unsigned char *) cmd_param, 1);
+                ijk=(ijk+1)%7;
+                invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) cmd_cmdtosend, (const unsigned char *) cmd_param, 1);
             }
         } else if (detected_event->type_of_event == RECEIVED_MSG) { 
             ESP_LOGW(TAG1,"loop(): The detected event is a msg for me! With this content:\r\n");
@@ -512,7 +523,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
                 } else { //If this is a RESP to a previously issued 'RPT' CMD then for now just print the content
                     printf("received reply to CMD: %s, PARAM_RCV: %s",detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                 }
-                vTaskDelay(5000/portTICK_RATE_MS);
+                vTaskDelay(2000/portTICK_RATE_MS);
             } 
         } else if (detected_event->type_of_event == RECEIVED_ACK) {
             ESP_LOGW(TAG1,"loop(): received and ACK for command:\r\n");
@@ -532,7 +543,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
             vTaskDelay(2500/portTICK_RATE_MS);
         } else {
-            vTaskDelay(500/portTICK_RATE_MS);
+            vTaskDelay(50/portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONMASTER)
@@ -652,7 +663,7 @@ void loop(commands_t* my_commands, commands_t* rcv_commands, miodb_t* db){
             printf("loop():detected_event->valore_evento.pair_addr: %u\r\n",detected_event->valore_evento.pair_addr);
             vTaskDelay(2500/portTICK_RATE_MS);
         } else {
-            vTaskDelay(500/portTICK_RATE_MS);
+            vTaskDelay(50/portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONSLAVE)
