@@ -15,8 +15,8 @@ case ${option}
 in
 0)  PORTA_="-p/dev/ttyUSB0";;
 1)  PORTA_="-p/dev/ttyUSB1";;
-B)  BUILD1_="build";; #BUILD2_=; BUILD3_=; PORTA_=;;
-V)  BUILD1_="monitor";; #BUILD2_=""; BUILD3_="";;
+B)  BUILD1_="build";;
+V)  BUILD1_="monitor";;
 N)  BUILD1_="build"; BUILD2_="app-flash"; BUILD3_="monitor";;
 M)  STATION_="#define DEVOPS_THIS_IS_STATION_MASTER";;
 S)  STATION_="#define DEVOPS_THIS_IS_STATION_SLAVE";;
@@ -33,7 +33,7 @@ CMD_="/home/ccattaneo/esp/esp-idf/tools/idf.py"
 
 if [ ${#BUILD2_} -gt 0 ] #app-flash
 then
-    echo "Caso1"
+    #echo "Caso1"
     echo "${CMD_}" "${PORTA_}" "${BUILD1_}" "${BUILD2_}" "${BUILD3_}"
     ("${CMD_}" "${PORTA_}" "${BUILD1_}" "${BUILD2_}" "${BUILD3_}")
     exit 0
@@ -41,7 +41,7 @@ fi
 
 if [ ${#BUILD1_} -gt 5 ] #monitor
 then
-    echo "Caso2"
+    #echo "Caso2"
     echo "${CMD_}" "${PORTA_}" "${BUILD1_}"
     ("${CMD_}" "${PORTA_}" "${BUILD1_}")
     exit 0
@@ -51,7 +51,3 @@ echo "Caso3"
 echo "${CMD_}" "${BUILD1_}"
 ("${CMD_}" "${BUILD1_}")
 exit 0
-
-#echo "${CMD_}" "${PORTA_}" "${BUILD1_}" "${BUILD2_}" "${BUILD3_}"
-#("${CMD_}" "${PORTA_}" "${BUILD1_}" "${BUILD2_}" "${BUILD3_}")
-#exit 0

@@ -46,7 +46,7 @@ void list_commands_status(commands_t* my_commands, char* name){
     unsigned char i=0;
     /////REPORT commands_status[] BEFORE processing
     if (my_commands->num_cmd_under_processing == 0) {
-        printf("clean_acknowledged_cmds():commands_status is empty\r\n");
+        printf("list_commands_status():commands_status is empty\r\n");
     }
     while (i<my_commands->num_cmd_under_processing){
         printf("list_commands_status(): %s.commands_status[%u].cmd: %s\r\n",name,i,my_commands->commands_status[i].cmd);
