@@ -46,7 +46,7 @@ void list_commands_status(commands_t* my_commands, char* name){
     unsigned char i=0;
     /////REPORT commands_status[] BEFORE processing
     if (my_commands->num_cmd_under_processing == 0) {
-        printf("list_commands_status():commands_status is empty\r\n");
+        printf("list_commands_status(): %s commands list is empty\r\n",name);
     }
     while (i<my_commands->num_cmd_under_processing){
         printf("list_commands_status(): %s.commands_status[%u].cmd: %s\r\n",name,i,my_commands->commands_status[i].cmd);
@@ -254,7 +254,7 @@ unsigned char check_rcved_acks(evento_t* detected_event, commands_t* my_commands
 }
 
 evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_input_command_pin, commands_t* my_commands, commands_t* rcv_commands){
-    printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
+    //printf("detectEvent(): Calling function clean_acknowledged_cmds()\r\n");
     clean_cmds_list(my_commands,"my_commands");
     clean_cmds_list(rcv_commands,"rcv_commands");
 
@@ -281,7 +281,7 @@ evento_t* detect_event(uart_port_t uart_controller, const gpio_num_t* mygpio_inp
     
     //Detect if IO_INPUT went low 
     for (int i=0; i<sizeof(IN) ; i++){
-        printf("i=%u, sizeof(IN)=%u\r\n",i,sizeof(IN));
+        //printf("i=%u, sizeof(IN)=%u\r\n",i,sizeof(IN));
         if (!(IN[i]==IN_PREC[i])){ //if IN[i] went low then an event occurred
             detected_event.type_of_event = IO_INPUT_ACTIVE;
             printf("detectEvent(): IN[%u]: %u ; IN_PREC[%u]: %u\r\n",i,IN[i],i,IN_PREC[i]);

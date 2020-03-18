@@ -62,8 +62,8 @@ unsigned char* pack_msg(unsigned char addr_from, unsigned char addr_to, const un
     //(1) DATE                                ---- AAAAMMGG (ASCII)
     //(2) HOUR                                ---- HHMMSS (ASCII)
     //(3) TIME                                ---- AAAAMMGGHHMMSS (ASCII)
-    //(4) NUM_APRI_RCVED                      ---- OOO (HEX CODING 3 BYTES)
-    //(5) NUM_TOTALCMDS_RCVED                 ---- CCC (HEX CODING 3 BYTES)
+    //(4) NOR (NUM_APRI_RCVED)                ---- OOO0 (HEX CODING 4 BYTES)
+    //(5) NTR (NUM_TOTALCMDS_RCVED)           ---- CCCC (HEX CODING 4 BYTES)
     //...........
     //...........
     //...........
