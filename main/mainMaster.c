@@ -28,6 +28,7 @@
 #include <nvs_flash.h>
 #include <sys/param.h>
 #include "nvs_flash.h"
+//#include "tipostazione.h"
 
 #ifdef DEVOPS_THIS_IS_STATION_SLAVE
 #include "miohttpd.h"
@@ -42,26 +43,26 @@ static const char *TAG1 = "OnlyHC12App";
 ////////////////////////////////////////////// HELPER FUNCTIONS //////////////////////////////////////////////
 void stampa_db(miodb_t *db)
 {
-    printf("*******\r\n");
-    printf("DATA= %s\r\n", db->DATA);
-    printf("ORA = %s\r\n", db->ORA);
-    printf("num_APRI_received = %u\r\n", db->num_APRI_received);
-    printf("num_TOT_received = %u\r\n", db->num_TOT_received);
-    printf("*******\r\n");
+    ESP_LOGD(TAG1, "*******");
+    ESP_LOGD(TAG1, "DATA= %s", db->DATA);
+    ESP_LOGD(TAG1, "ORA = %s", db->ORA);
+    ESP_LOGD(TAG1, "num_APRI_received = %u", db->num_APRI_received);
+    ESP_LOGD(TAG1, "num_TOT_received = %u", db->num_TOT_received);
+    ESP_LOGD(TAG1, "*******");
 }
 
 void print_struct_tm(char *tag, struct tm *t)
 {
-    printf("\r\n%s.tm_sec: %d, ", tag, t->tm_sec); // seconds
-    printf("%s.tm_min: %d, ", tag, t->tm_min);     // minutes
-    printf("%s.tm_hour: %d, ", tag, t->tm_hour);   // hours
-    printf("%s.tm_mday: %d, ", tag, t->tm_mday);   // day of the month
-    printf("%s.tm_mon: %d, ", tag, t->tm_mon);     // month
-    printf("%s.tm_year: %d, ", tag, t->tm_year);   // year
-    printf("%s.tm_wday: %d, ", tag, t->tm_wday);   // day of the week
-    printf("%s.tm_yday: %d, ", tag, t->tm_yday);   // day in the year
-    printf("%s.tm_isdst: %d, ", tag, t->tm_isdst); // daylight saving time
-    printf("size %s: %u\r\n", tag, sizeof(struct tm));
+    printf("\033[1;36m\r\n%s.tm_sec: %d, ", tag, t->tm_sec); // seconds
+    printf("\033[1;33m%s.tm_min: %d, ", tag, t->tm_min);     // minutes
+    printf("\033[1;36m%s.tm_hour: %d, ", tag, t->tm_hour);   // hours
+    printf("\033[1;33m%s.tm_mday: %d, ", tag, t->tm_mday);   // day of the month
+    printf("\033[1;36m%s.tm_mon: %d, ", tag, t->tm_mon);     // month
+    printf("\033[1;33m%s.tm_year: %d, ", tag, t->tm_year);   // year
+    printf("\033[1;36m%s.tm_wday: %d, ", tag, t->tm_wday);   // day of the week
+    printf("\033[1;33m%s.tm_yday: %d, ", tag, t->tm_yday);   // day in the year
+    printf("\033[1;36m%s.tm_isdst: %d, ", tag, t->tm_isdst); // daylight saving time
+    printf("\033[1;31msize %s: %u\r\n", tag, sizeof(struct tm));
     return;
 }
 
@@ -115,9 +116,9 @@ int endian(void)
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
 {
-    ESP_LOGW(TAG1, "==============================");
-    ESP_LOGW(TAG1, "Welcome to HC12 control App");
-    ESP_LOGW(TAG1, "Setting up...................");
+    ESP_LOGI(TAG1, "==============================");
+    ESP_LOGI(TAG1, "Welcome to HC12 control App");
+    ESP_LOGI(TAG1, "Setting up...................");
 
     /* CONFIGURING PRESENTATION BLINK LED */
     //gpio_pad_select_gpio((gpio_num_t)BLINK_GPIO);
@@ -140,7 +141,7 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
-    ESP_LOGW(TAG1, "Set up of output leds ended");
+    ESP_LOGI(TAG1, "Set up of output leds ended");
 
     /* CONFIGURING COMMAND INPUT */
     //bit mask of the pins, use GPIO4 here
@@ -155,22 +156,22 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
-    ESP_LOGW(TAG1, "Set up of command inputs ended");
+    ESP_LOGI(TAG1, "Set up of command inputs ended");
 
     miogpio_input_command_pin[0] = (gpio_num_t)GPIO_INPUT_COMMAND_PIN_UNO;
     miogpio_input_command_pin[1] = (gpio_num_t)GPIO_INPUT_COMMAND_PIN_DUE;
 
     for (int i = 0; i < NUM_HANDLED_INPUTS; i++)
     {
-        printf("IN[%u] =%u; gpio_input_command_pin[%u]=%u\r\n", i, (unsigned char)gpio_get_level(miogpio_input_command_pin[i]), i, miogpio_input_command_pin[i]);
+        ESP_LOGV(TAG1, "IN[%u] =%u; gpio_input_command_pin[%u]=%u", i, (unsigned char)gpio_get_level(miogpio_input_command_pin[i]), i, miogpio_input_command_pin[i]);
     }
 
     //Initializing Radio HC12
     setupmyRadioHC12();
-    ESP_LOGW(TAG1, "Set up of HC12 Radio ended");
+    ESP_LOGI(TAG1, "Set up of HC12 Radio ended");
 
     my_event_group = xEventGroupCreate();
-    ESP_LOGW(TAG1, "Event Group Created");
+    ESP_LOGI(TAG1, "Event Group Created");
 
     //Initializing DB
     for (unsigned char i = 0; i < NUM_MAX_CMDS; i++)
@@ -315,13 +316,15 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         } while (0);*/
 
     struct timespec res;
-    printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
-    printf("res.tv_sec: %ld\r\n", res.tv_sec);
-    printf("res.tv_nsec: %ld\r\n", res.tv_nsec);
-    res.tv_sec += 1584425168; //1583819573;
-    printf("retCode clock_gettime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
-    printf("res.tv_sec: %ld\r\n", res.tv_sec);
-    printf("res.tv_nsec: %ld\r\n", res.tv_nsec);
+    int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+    ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
+    ESP_LOGV(TAG1, "res.tv_sec: %ld", res.tv_sec);
+    ESP_LOGV(TAG1, "res.tv_nsec: %ld", res.tv_nsec);
+    res.tv_sec += 1585471352; // 1584425168; //1583819573;
+    ret_ = clock_settime(CLOCK_REALTIME, &res);
+    ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
+    ESP_LOGV(TAG1, "res.tv_sec: %ld", res.tv_sec);
+    ESP_LOGV(TAG1, "res.tv_nsec: %ld", res.tv_nsec);
 
     time_t now;
     struct tm timeinfo;
@@ -330,14 +333,14 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     time(&now);
     localtime_r(&now, &timeinfo);
 
-    printf("Actual UTC time:\n");
+    ESP_LOGI(TAG1, "Actual UTC time:");
     strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGV(TAG1, "- %s", buffer);
     strftime(buffer, sizeof(buffer), "%A, %d %B %Y", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGV(TAG1, "- %s", buffer);
     strftime(buffer, sizeof(buffer), "Today is day %j of year %Y", &timeinfo);
-    printf("- %s\n", buffer);
-    printf("\n");
+    ESP_LOGV(TAG1, "- %s", buffer);
+    ESP_LOGV(TAG1, "\n");
 
     // change the timezone to Italy
     setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
@@ -345,14 +348,14 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
 
     time(&now);
     localtime_r(&now, &timeinfo);
-    printf("Actual Italy time:\n");
+    ESP_LOGV(TAG1, "Actual Italy time:\n");
     strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGV(TAG1, "- %s\n", buffer);
     strftime(buffer, sizeof(buffer), "%A, %d %B %Y", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGV(TAG1, "- %s\n", buffer);
     strftime(buffer, sizeof(buffer), "Today is day %j of year %Y", &timeinfo);
-    printf("- %s\n", buffer);
-    printf("\n");
+    ESP_LOGV(TAG1, "- %s\n", buffer);
+    ESP_LOGV(TAG1, "\n");
     strftime(buffer, sizeof(buffer), "%c", &timeinfo);
     ESP_LOGI(TAG1, "The current date/time in Italy is: %s", buffer);
 
@@ -409,20 +412,20 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     unsigned char cmd_cmdtosend[FIELD_MAX];
     memset(cmd_cmdtosend, 0, sizeof(cmd_param));
 
-    printf("loop(): *******************************************Entering loop() function!!!!!\r\n");
+    ESP_LOGW(TAG1, "loop(): *******************************************Entering loop() function!!!!!");
     time_t now;
     struct tm timeinfo;
     char buffer[100];
     time(&now);
     localtime_r(&now, &timeinfo);
-    printf("Actual Italy time:\n");
+    ESP_LOGD(TAG1, "Actual Italy time:");
     strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M:%S", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGD(TAG1, "- %s", buffer);
     strftime(buffer, sizeof(buffer), "%A, %d %B %Y", &timeinfo);
-    printf("- %s\n", buffer);
+    ESP_LOGD(TAG1, "- %s", buffer);
     strftime(buffer, sizeof(buffer), "Today is day %j of year %Y", &timeinfo);
-    printf("- %s\n", buffer);
-    printf("\n");
+    ESP_LOGD(TAG1, "- %s", buffer);
+    ESP_LOGD(TAG1, "\n");
     strftime(buffer, sizeof(buffer), "%c", &timeinfo);
     ESP_LOGI(TAG1, "The current date/time in Italy is: %s", buffer);
 
@@ -443,16 +446,17 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
 
     if (STATION_ROLE == STATIONMASTER)
     { //BEHAVE AS MASTER STATION
-        printf("\nloop(): ######################This is the Master station######################\n");
+        ESP_LOGI(TAG1, "\nloop(): ######################This is the Master station######################");
         strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
-        if (strncmp(buffer, "01:00:30", sizeof(buffer)) == 0)
+        if (beginsWith((unsigned char *)buffer, "01:00:30") || beginsWith((unsigned char *)buffer, "01:00:31"))
         { //update clock from SLAVE once a day
             strcpy2(cmd_cmdtosend, (const unsigned char *)"RPT");
             strcpy2(cmd_param, (const unsigned char *)"TIME");
             invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *)cmd_cmdtosend, (const unsigned char *)cmd_param, 1);
         }
 
-        //// DELETE START //////////
+//#define AUTO_ISSUE_CMD_FOR_DEBUG_MASTER   //// DELETE FOR PRODUCTION  //////////
+#ifdef AUTO_ISSUE_CMD_FOR_DEBUG_MASTER
         switch (ijk)
         {
         case 0:
@@ -494,24 +498,24 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         }
         ijk = (ijk + 1) % 7;
         invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *)cmd_cmdtosend, (const unsigned char *)cmd_param, 1);
-        //// DELETE END //////////
+#endif //// DELETE END //////////
 
         if (detected_event->type_of_event == IO_INPUT_ACTIVE)
         { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
             if (detected_event->valore_evento.value_of_input == 1)
             { // NOTHING TO DO:
-                printf("\r\nloop(): EVENTO SU I_O PIN %u GESTITO CORRETTAMENTE!!!!!\r\n", detected_event->valore_evento.input_number);
-                //ESP_LOGW(TAG1,"loop(): The detected event is a BUTTON press:\r\n");
+                ESP_LOGI(TAG1, "loop(): EVENTO SU I_O PIN %u GESTITO CORRETTAMENTE!!!!!", detected_event->valore_evento.input_number);
                 fflush(stdout);
-                printf("loop():detected_event->type_of_event: %u\r\n", detected_event->type_of_event);
-                printf("loop():detected_event->valore_evento.input_number: %u\r\n", detected_event->valore_evento.input_number);
-                printf("loop():detected_event->valore_evento.value_of_input: %u\r\n", detected_event->valore_evento.value_of_input);
+                ESP_LOGD(TAG1, "loop():detected_event->type_of_event: %u", detected_event->type_of_event);
+                ESP_LOGD(TAG1, "loop():detected_event->valore_evento.input_number: %u", detected_event->valore_evento.input_number);
+                ESP_LOGD(TAG1, "loop():detected_event->valore_evento.value_of_input: %u", detected_event->valore_evento.value_of_input);
             }
             else //SENDING COMMAND TO OPEN
             {
                 give_gpio_feedback(0, 0); //swithces off NOK and OK led since a new command is going to be issued
-                //sprintf((char *)cmd_param,"%d",detected_event->valore_evento.input_number);
-                //invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *) "APRI", (const unsigned char *) cmd_param, 1);
+
+#define USE_ONE_INPUT_FOR_ALL_COMMANDS_MASTER //// DELETE FOR PRODUCTION /////
+#ifdef USE_ONE_INPUT_FOR_ALL_COMMANDS_MASTER
                 switch (ijk)
                 {
                 case 0:
@@ -553,25 +557,29 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                 }
                 ijk = (ijk + 1) % 7;
                 invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *)cmd_cmdtosend, (const unsigned char *)cmd_param, 1);
+#else
+                sprintf((char *)cmd_param, "%d", detected_event->valore_evento.input_number);
+                invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *)"APRI", (const unsigned char *)cmd_param, 1);
+#endif
             }
         }
         else if (detected_event->type_of_event == RECEIVED_MSG)
         {
-            ESP_LOGW(TAG1, "loop(): The detected event is a msg for me! With this content:\r\n");
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGI(TAG1, "loop(): The detected event is a msg for me! With this content:");
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
 
             //I am sending ACK to the sending station in any case (i.e. even if a previous repetition of the same command has already been received????)
-            if (!(strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"ACK", 3) == 0))
+            if (!beginsWith(detected_event->valore_evento.cmd_received, "ACK"))
             {
                 invia_ack(UART_NUM_2, my_commands, ADDR_MASTER_STATION, detected_event);
             }
             //check if this one is an actual new command and in case I track in the received commands list to avoid actuating repetitions
             if (is_rcv_a_new_cmd(rcv_commands, detected_event))
             {
-                if (!(strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"RSP", strlen("RSP")) == 0))
+                if (!beginsWith(detected_event->valore_evento.cmd_received, "RSP"))
                 {
                     //if I have received a command I am forwarding it to the slave station (for now MASTER station just forwards received commands)
                     give_gpio_feedback(0, 0); //swithces off NOK and OK led since a new command is going to be issued
@@ -582,10 +590,10 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                 else
                 {
                     //If this is a RESP to a previously issued 'RPT' CMD then print the content
-                    printf("received reply to CMD: %s, PARAM_RCV: %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"DATE", strlen("DATE")) == 0)
+                    ESP_LOGI(TAG1, "received reply to CMD: %s, PARAM_RCV: %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                    if (beginsWith(detected_event->valore_evento.param_received, "DATE"))
                     {
-                        printf("loop():EXTRACTING DATE FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING DATE FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -598,9 +606,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_isdst = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("DATE20200101"), 1));
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_ = clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_settime: %d", ret_);
                         vTaskDelay(500 / portTICK_RATE_MS);
                         //updating DB wall clock
                         time(&now);
@@ -608,9 +618,9 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->DATA, sizeof(db->DATA), "%Y%m%d", &timeinfo);
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"HOUR", strlen("HOUR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "HOUR"))
                     {
-                        printf("loop():EXTRACTING HOUR FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGD(TAG1, "loop():EXTRACTING HOUR FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -621,9 +631,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_sec = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("HOUR0000"), 2)); //SS is 2 chars long
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGD(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_ = clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGD(TAG1, "retCode clock_settime: %d", ret_);
                         vTaskDelay(500 / portTICK_RATE_MS);
                         //updating DB wall clock
                         time(&now);
@@ -631,9 +643,9 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->DATA, sizeof(db->DATA), "%Y%m%d", &timeinfo);
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"TIME", strlen("TIME")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "TIME"))
                     {
-                        printf("loop():EXTRACTING TIME FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGD(TAG1, "loop():EXTRACTING TIME FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -652,9 +664,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_sec = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("TIME2020010101200"), 2)); //SS is 2 chars long
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_ = clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_settime: %d", ret_);
                         //updating DB wall clock
                         time(&now);
                         localtime_r(&now, &timeinfo);
@@ -662,20 +676,20 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NOR", strlen("NOR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NOR"))
                     {
-                        printf("loop():EXTRACTING NUM_APRI_RCVED FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING NUM_APRI_RCVED FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
-                        printf("loop(): SLAVE HAS RECEIVED %ld APRI COMMANDS\r\n", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NOR"), 4), NULL, 16)); //NOR BRINGS A 4 BYTES HEX CODED FIELD
+                        ESP_LOGI(TAG1, "loop(): SLAVE HAS RECEIVED %ld APRI COMMANDS", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NOR"), 4), NULL, 16)); //NOR BRINGS A 4 BYTES HEX CODED FIELD
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NTC", strlen("NTC")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NTC"))
                     {
-                        printf("loop():EXTRACTING NUM_TOTALCMDS_RCVED FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING NUM_TOTALCMDS_RCVED FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
-                        printf("loop(): SLAVE HAS RECEIVED AN OVERALL %ld COMMANDS\r\n", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NTC"), 4), NULL, 16)); //NTC BRINGS A 4 BYTES HEX CODED FIELD
+                        ESP_LOGI(TAG1, "loop(): SLAVE HAS RECEIVED AN OVERALL %ld COMMANDS", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NTC"), 4), NULL, 16)); //NTC BRINGS A 4 BYTES HEX CODED FIELD
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
                     vTaskDelay(2000 / portTICK_RATE_MS);
@@ -684,77 +698,76 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         }
         else if (detected_event->type_of_event == RECEIVED_ACK)
         {
-            ESP_LOGW(TAG1, "loop(): received and ACK for command:\r\n");
+            ESP_LOGI(TAG1, "loop(): received and ACK for command:");
             give_gpio_feedback(1, 0); //NOK led is switched off and OK led is lit since an ACK has been received
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(1000 / portTICK_RATE_MS);
         }
         else if (detected_event->type_of_event == FAIL_TO_SEND_CMD)
         {
-            ESP_LOGW(TAG1, "loop(): failure to send command:\r\n");
+            ESP_LOGE(TAG1, "loop(): failure to send command:");
             give_gpio_feedback(0, 1); //NOK led is lit and OK led is switched off since a FAILURE happened
 
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(2500 / portTICK_RATE_MS);
         }
         else
         {
-            vTaskDelay(50 / portTICK_RATE_MS);
+            vTaskDelay(1500 / portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONMASTER)
 
     if (STATION_ROLE == STATIONSLAVE)
     { //BEHAVE AS SLAVE STATION
-        printf("\nn######################This is the Slave station######################\n");
+        ESP_LOGI(TAG1, "\nn######################This is the Slave station######################\n");
 
         if (detected_event->type_of_event == RECEIVED_MSG)
         {
-            ESP_LOGW(TAG1, "loop(): This was the msg for me:\r\n");
-            printf("loop():cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGI(TAG1, "loop(): This was the msg for me:");
+            ESP_LOGI(TAG1, "loop():cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGI(TAG1, "loop():param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGI(TAG1, "loop():ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGI(TAG1, "loop():pair_addr: %u", detected_event->valore_evento.pair_addr);
 
             //I am sending ACK to the sending station in any case (i.e. even if a previous repetition of the same command has already been received????)
-            if (!(strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"ACK", 3) == 0))
+            if (!beginsWith(detected_event->valore_evento.cmd_received, "ACK"))
             {
                 invia_ack(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event);
             }
             //check if this one is an actual new command and in case I track in the received commands to avoid implementing repetitions
             if (is_rcv_a_new_cmd(rcv_commands, detected_event))
             {
-
                 //Actuating APRI commands
-                if (strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"APRI", strlen("APRI")) == 0)
+                if (beginsWith(detected_event->valore_evento.cmd_received, "APRI"))
                 {
                     db->num_APRI_received++;
                     db->num_TOT_received++;
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"0", 1) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "0"))
                     {
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         vTaskDelay(2500 / portTICK_RATE_MS);
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 0)); //closing GARAGE relay
                         vTaskDelay(CONFIG_ON_COMMAND_LENGTH / portTICK_RATE_MS);
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 1)); //relasing GARAGE relay
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"1", strlen("1")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "1"))
                     {
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         vTaskDelay(2500 / portTICK_RATE_MS);
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 0)); //closing BIG GATE relay
                         vTaskDelay(CONFIG_ON_COMMAND_LENGTH / portTICK_RATE_MS);
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 1)); //relasing BIG GATE relay
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"2", strlen("2")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "2"))
                     {
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         vTaskDelay(2500 / portTICK_RATE_MS);
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 0));  //closing GARAGE relay
                         ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 0)); //closing BIG GATE relay
@@ -765,7 +778,7 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                     return;
                 }
                 //REPORT COMMAND HANDLING
-                if (strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"RPT", strlen("RPT")) == 0)
+                if (beginsWith(detected_event->valore_evento.cmd_received, "RPT"))
                 {
                     //updating DB wall clock
                     time(&now);
@@ -773,29 +786,29 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                     strftime((char *)db->DATA, sizeof(db->DATA), "%Y%m%d", &timeinfo);
                     strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
 
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"DATE", strlen("DATE")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "DATE"))
                     {
                         db->num_TOT_received++;
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param, detected_event->valore_evento.param_received, sizeof(cmd_param));
                         strncat2(cmd_param, db->DATA, sizeof(cmd_param));
                         cmd_param[strlen2(cmd_param)] = timeinfo.tm_isdst + 0x30; //Adding DST at the end of cmd_poaram string
                         invia_comando(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param, 1);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"HOUR", strlen("HOUR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "HOUR"))
                     {
                         db->num_TOT_received++;
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param, detected_event->valore_evento.param_received, sizeof(cmd_param));
                         strncat2(cmd_param, db->ORA, sizeof(cmd_param));
                         invia_comando(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param, 1);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"TIME", strlen("TIME")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "TIME"))
                     {
                         db->num_TOT_received++;
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param, detected_event->valore_evento.param_received, sizeof(cmd_param));
                         strncat2(cmd_param, db->DATA, sizeof(cmd_param));
                         cmd_param[strlen2(cmd_param)] = timeinfo.tm_isdst + 0x30; //Adding DST at the end of cmd_poaram string
@@ -803,20 +816,20 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         invia_comando(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param, 1);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NOR", strlen("NOR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NOR"))
                     {
                         db->num_TOT_received++;
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param, detected_event->valore_evento.param_received, sizeof(cmd_param));
                         snprintf((char *)(cmd_param + strlen2(cmd_param)), sizeof(cmd_param) - strlen2(cmd_param), "%4hhX\n", db->num_APRI_received);
                         //strncat2(cmd_param,db->num_APRI_received,sizeof(cmd_param));
                         invia_comando(UART_NUM_2, my_commands, ADDR_SLAVE_STATION, detected_event->valore_evento.pair_addr, (const unsigned char *)"RSP", cmd_param, 1);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NTC", strlen("NTC")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NTC"))
                     {
                         db->num_TOT_received++;
-                        printf("loop():ACTUATING RECEIVED CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():ACTUATING RECEIVED CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         strncpy2(cmd_param, detected_event->valore_evento.param_received, sizeof(cmd_param));
                         snprintf((char *)(cmd_param + strlen2(cmd_param)), sizeof(cmd_param) - strlen2(cmd_param), "%4hhX\n", db->num_TOT_received);
                         //strncat2(cmd_param,db->num_TOT_received,sizeof(cmd_param));
@@ -829,35 +842,35 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         }
         else if (detected_event->type_of_event == RECEIVED_ACK)
         { //for now this should not happen in SLAVE station since it does not emit commands
-            ESP_LOGW(TAG1, "loop(): received and ACK for command:\r\n");
+            ESP_LOGI(TAG1, "loop(): received and ACK for command:");
             give_gpio_feedback(1, 0); //NOK led is switched off and OK led is lit since an ACK has been received
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(1000 / portTICK_RATE_MS);
         }
         else if (detected_event->type_of_event == FAIL_TO_SEND_CMD)
         {
-            ESP_LOGW(TAG1, "loop(): failure to send command:\r\n");
+            ESP_LOGE(TAG1, "loop(): failure to send command:");
             give_gpio_feedback(0, 1); //NOK led is lit and OK led is switched off since a FAILURE happened
 
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(2500 / portTICK_RATE_MS);
         }
         else
         {
-            vTaskDelay(50 / portTICK_RATE_MS);
+            vTaskDelay(1500 / portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONSLAVE)
 
     if (STATION_ROLE == STATIONMOBILE)
     { //BEHAVE AS MOBILE STATION
-        printf("\nloop(): ######################This is the Mobile station######################\n");
+        ESP_LOGI(TAG1, "\nloop(): ######################This is the Mobile station######################\n");
         strftime(buffer, sizeof(buffer), "%H:%M:%S", &timeinfo);
         if (strncmp(buffer, "01:01:30", sizeof(buffer)) == 0)
         { //update clock from SLAVE once a day
@@ -869,22 +882,17 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         { // CHECKING IF MY INPUT PIN TOLD ME TO SEND A CMD TO SLAVE STATION
             if (detected_event->valore_evento.value_of_input == 1)
             { // NOTHING TO DO:
-                printf("\r\nloop(): EVENTO SU I_O PIN %u GESTITO CORRETTAMENTE!!!!!\r\n", detected_event->valore_evento.input_number);
-                //ESP_LOGW(TAG1,"loop(): The detected event is a BUTTON press:\r\n");
+                ESP_LOGI(TAG1, "\r\nloop(): EVENTO SU I_O PIN %u GESTITO CORRETTAMENTE!!!!!", detected_event->valore_evento.input_number);
                 fflush(stdout);
-                printf("loop():detected_event->type_of_event: %u\r\n", detected_event->type_of_event);
-                printf("loop():detected_event->valore_evento.input_number: %u\r\n", detected_event->valore_evento.input_number);
-                printf("loop():detected_event->valore_evento.value_of_input: %u\r\n", detected_event->valore_evento.value_of_input);
+                ESP_LOGD(TAG1, "loop():detected_event->type_of_event: %u", detected_event->type_of_event);
+                ESP_LOGD(TAG1, "loop():detected_event->valore_evento.input_number: %u", detected_event->valore_evento.input_number);
+                ESP_LOGD(TAG1, "loop():detected_event->valore_evento.value_of_input: %u", detected_event->valore_evento.value_of_input);
             }
             else //SENDING COMMAND TO OPEN
             {
                 give_gpio_feedback(0, 0); //swithces off NOK and OK led since a new command is going to be issued
-                //sprintf((char *)cmd_param,"%d",detected_event->valore_evento.input_number);
-                //ATTENZIONE SE EMETTI I DUE COMANDI COSì ALLORA LO SLAVE POTREBBE ATTUARE 2 VOLTE IL COMANDO CON EFFETTI INDESIDERATI
-                //A MENO DI TOLGIERE IN is_rcv_a_new_cmd() IL CONTROLLO SUL PAIR_ADDRESS
-                invia_comando(UART_NUM_2, my_commands, ADDR_MOBILE_STATION, ADDR_SLAVE_STATION, (const unsigned char *)"APRI", (const unsigned char *)cmd_param, 1);
-                invia_comando(UART_NUM_2, my_commands, ADDR_MOBILE_STATION, ADDR_MASTER_STATION, (const unsigned char *)"APRI", (const unsigned char *)cmd_param, 1);
-
+#define USE_ONE_INPUT_FOR_ALL_COMMANDS_MOBILE
+#ifdef USE_ONE_INPUT_FOR_ALL_COMMANDS_MOBILE
                 switch (ijk)
                 {
                 case 0:
@@ -925,19 +933,26 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                     break;
                 }
                 ijk = (ijk + 1) % 7;
+#else
                 invia_comando(UART_NUM_2, my_commands, ADDR_MASTER_STATION, ADDR_SLAVE_STATION, (const unsigned char *)cmd_cmdtosend, (const unsigned char *)cmd_param, 1);
+                //sprintf((char *)cmd_param,"%d",detected_event->valore_evento.input_number);
+                //ATTENZIONE SE EMETTI I DUE COMANDI COSì ALLORA LO SLAVE POTREBBE ATTUARE 2 VOLTE IL COMANDO CON EFFETTI INDESIDERATI
+                //A MENO DI TOLGIERE IN is_rcv_a_new_cmd() IL CONTROLLO SUL PAIR_ADDRESS
+                invia_comando(UART_NUM_2, my_commands, ADDR_MOBILE_STATION, ADDR_SLAVE_STATION, (const unsigned char *)"APRI", (const unsigned char *)cmd_param, 1);
+                invia_comando(UART_NUM_2, my_commands, ADDR_MOBILE_STATION, ADDR_MASTER_STATION, (const unsigned char *)"APRI", (const unsigned char *)cmd_param, 1);
+#endif
             }
         }
         else if (detected_event->type_of_event == RECEIVED_MSG)
         {
-            ESP_LOGW(TAG1, "loop(): The detected event is a msg for me! With this content:\r\n");
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGI(TAG1, "loop(): The detected event is a msg for me! With this content:");
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGI(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
 
             //I am sending ACK to the sending station in any case (i.e. even if a previous repetition of the same command has already been received????)
-            if (!(strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"ACK", 3) == 0))
+            if (!beginsWith(detected_event->valore_evento.cmd_received, "ACK"))
             {
                 invia_ack(UART_NUM_2, my_commands, ADDR_MOBILE_STATION, detected_event);
             }
@@ -945,7 +960,7 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
             //check if this one is an actual new command and in case I track in the received commands list to avoid actuating repetitions
             if (is_rcv_a_new_cmd(rcv_commands, detected_event))
             {
-                if (!(strncmp2(detected_event->valore_evento.cmd_received, (const unsigned char *)"RSP", strlen("RSP")) == 0))
+                if (!beginsWith(detected_event->valore_evento.cmd_received, "RSP"))
                 {
                     //if I have received a command I am forwarding it to the slave station (for now MOBILE station just forwards received commands)
                     give_gpio_feedback(0, 0); //swithces off NOK and OK led since a new command is going to be issued
@@ -956,10 +971,10 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                 else
                 {
                     //If this is a RESP to a previously issued 'RPT' CMD then print the content
-                    printf("received reply to CMD: %s, PARAM_RCV: %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"DATE", strlen("DATE")) == 0)
+                    ESP_LOGI(TAG1, "received reply to CMD: %s, PARAM_RCV: %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                    if (beginsWith(detected_event->valore_evento.param_received, "DATE"))
                     {
-                        printf("loop():EXTRACTING DATE FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING DATE FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -972,9 +987,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_isdst = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("DATE20200101"), 1));
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_ = clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_settime: %d", ret_);
                         vTaskDelay(500 / portTICK_RATE_MS);
                         //updating DB wall clock
                         time(&now);
@@ -982,9 +999,9 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->DATA, sizeof(db->DATA), "%Y%m%d", &timeinfo);
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"HOUR", strlen("HOUR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "HOUR"))
                     {
-                        printf("loop():EXTRACTING HOUR FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING HOUR FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -995,9 +1012,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_sec = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("HOUR0000"), 2)); //SS is 2 chars long
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_ = clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_ = clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_settime: %d", ret_);
                         vTaskDelay(500 / portTICK_RATE_MS);
                         //updating DB wall clock
                         time(&now);
@@ -1005,9 +1024,9 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->DATA, sizeof(db->DATA), "%Y%m%d", &timeinfo);
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"TIME", strlen("TIME")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "TIME"))
                     {
-                        printf("loop():EXTRACTING TIME FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING TIME FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         print_struct_tm("timeinfo_before", &timeinfo);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
@@ -1026,9 +1045,11 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         timeinfo.tm_sec = atoi((char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("TIME2020010101200"), 2)); //SS is 2 chars long
                         print_struct_tm("timeinfo_after", &timeinfo);
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n", clock_gettime(CLOCK_REALTIME, &res));
+                        int ret_= clock_gettime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
                         res.tv_sec = mktime(&timeinfo);
-                        printf("retCode clock_settime: %d\r\n", clock_settime(CLOCK_REALTIME, &res));
+                        ret_= clock_settime(CLOCK_REALTIME, &res);
+                        ESP_LOGV(TAG1, "retCode clock_settime: %d", ret_);
                         //updating DB wall clock
                         time(&now);
                         localtime_r(&now, &timeinfo);
@@ -1036,20 +1057,20 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                         strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NOR", strlen("NOR")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NOR"))
                     {
-                        printf("loop():EXTRACTING NUM_APRI_RCVED FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING NUM_APRI_RCVED FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
-                        printf("loop(): SLAVE HAS RECEIVED %ld APRI COMMANDS\r\n", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NOR"), 4), NULL, 16)); //NOR BRINGS A 4 BYTES HEX CODED FIELD
+                        ESP_LOGI(TAG1, "loop(): SLAVE HAS RECEIVED %ld APRI COMMANDS", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NOR"), 4), NULL, 16)); //NOR BRINGS A 4 BYTES HEX CODED FIELD
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
-                    if (strncmp2(detected_event->valore_evento.param_received, (const unsigned char *)"NTC", strlen("NTC")) == 0)
+                    if (beginsWith(detected_event->valore_evento.param_received, "NTC"))
                     {
-                        printf("loop():EXTRACTING NUM_TOTALCMDS_RCVED FROM RSP CMD: %s -- %s\r\n", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
+                        ESP_LOGI(TAG1, "loop():EXTRACTING NUM_TOTALCMDS_RCVED FROM RSP CMD: %s -- %s", detected_event->valore_evento.cmd_received, detected_event->valore_evento.param_received);
                         unsigned char tmp[FIELD_MAX];
                         memset(tmp, 0, sizeof(tmp));
-                        printf("loop(): SLAVE HAS RECEIVED AN OVERALL %ld COMMANDS\r\n", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NTC"), 4), NULL, 16)); //NTC BRINGS A 4 BYTES HEX CODED FIELD
+                        ESP_LOGI(TAG1, "loop(): SLAVE HAS RECEIVED AN OVERALL %ld COMMANDS", strtol((const char *)strncpy2(tmp, detected_event->valore_evento.param_received + strlen("NTC"), 4), NULL, 16)); //NTC BRINGS A 4 BYTES HEX CODED FIELD
                         vTaskDelay(500 / portTICK_RATE_MS);
                     }
                     vTaskDelay(2000 / portTICK_RATE_MS);
@@ -1058,28 +1079,28 @@ void loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
         }
         else if (detected_event->type_of_event == RECEIVED_ACK)
         {
-            ESP_LOGW(TAG1, "loop(): received and ACK for command:\r\n");
+            ESP_LOGI(TAG1, "loop(): received and ACK for command:");
             give_gpio_feedback(1, 0); //NOK led is switched off and OK led is lit since an ACK has been received
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(1000 / portTICK_RATE_MS);
         }
         else if (detected_event->type_of_event == FAIL_TO_SEND_CMD)
         {
-            ESP_LOGW(TAG1, "loop(): failure to send command:\r\n");
+            ESP_LOGE(TAG1, "loop(): failure to send command:");
             give_gpio_feedback(0, 1); //NOK led is lit and OK led is switched off since a FAILURE happened
 
-            printf("loop():detected_event->valore_evento.cmd_received: %s\r\n", detected_event->valore_evento.cmd_received);
-            printf("loop():detected_event->valore_evento.param_received: %s\r\n", detected_event->valore_evento.param_received);
-            printf("loop():detected_event->valore_evento.ack_rep_counts: %u\r\n", detected_event->valore_evento.ack_rep_counts);
-            printf("loop():detected_event->valore_evento.pair_addr: %u\r\n", detected_event->valore_evento.pair_addr);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.param_received: %s", detected_event->valore_evento.param_received);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.ack_rep_counts: %u", detected_event->valore_evento.ack_rep_counts);
+            ESP_LOGD(TAG1, "loop():detected_event->valore_evento.pair_addr: %u", detected_event->valore_evento.pair_addr);
             vTaskDelay(2500 / portTICK_RATE_MS);
         }
         else
         {
-            vTaskDelay(50 / portTICK_RATE_MS);
+            vTaskDelay(1500 / portTICK_RATE_MS);
             return;
         }
     } //if (STATION_ROLE==STATIONMOBILE)
@@ -1180,11 +1201,11 @@ void app_main()
     static commands_t my_commands;
     static commands_t rcv_commands;
     static miodb_t db;
-
+    //esp_log_level_set("*", ESP_LOG_INFO);        // set all components to ERROR level
     setup(&my_commands, &rcv_commands, &db);
     xTaskCreate(&timeout_task, "timeout_task", 2048, NULL, 5, NULL);
 
-    ESP_LOGE(TAG1, "Entering while loop!!!!!\r\n");
+    ESP_LOGE(TAG1, "Entering while loop!!!!!");
     while (1)
         loop(&my_commands, &rcv_commands, &db);
     fflush(stdout);

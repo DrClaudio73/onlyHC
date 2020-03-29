@@ -1,4 +1,8 @@
+#ifndef _EVENT_ENGINE_
+#define _EVENT_ENGINE_
+
 #include "tipostazione.h"
+
 #define NUM_MAX_CMDS 50                                                             //max number of commands to handle
 #define NUM_MAX_RETRIES 5                                                           //numero massimo di volte che provo a riemettere il comando prima di arrendermi
 #define NUM_MAX_CHECKS_FOR_ACK 5                                                    //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
@@ -136,3 +140,5 @@ void list_commands_status(commands_t *my_commands, char *name);
 unsigned char manage_issuedcmd_retries(uart_port_t uart_controller, evento_t *detected_event, commands_t *my_commands);
 unsigned char manage_rcvcmds_retries(commands_t *rcv_commands);
 unsigned char is_rcv_a_new_cmd(commands_t *rcv_commands, evento_t *last_event); //return 0 if already present; 1 if the event is a new command
+
+#endif // _EVENT_ENGINE_

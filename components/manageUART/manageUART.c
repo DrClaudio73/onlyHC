@@ -1,4 +1,8 @@
 #include "manageUART.h"
+#include "esp_log.h"
+#include "typeconv.h"
+
+static const char *TAG_M="manageUART:";
 
 int scriviUART(uart_port_t uart_controller, unsigned char *text)
 {
@@ -42,6 +46,8 @@ void stampaStringa(char *line)
 {
     if (strlen(line) > 1)
     {
-        printf("%s", line);
+        ESP_LOGI(TAG_M,"%s", line);
+        ESP_LOG_BUFFER_HEXDUMP(TAG_M, line, strlen2((const unsigned char *)line), ESP_LOG_INFO);
+
     }
 }

@@ -1,3 +1,6 @@
+#ifndef _TYPECONVERS_
+#define _TYPECONVERS_
+
 #include "string.h"
 ////////////////////////////////////// FUNCTIONS FOR TYPE CONVERSION ////////////////////////////////////
 size_t strlen2(const unsigned char *stringa);
@@ -10,3 +13,7 @@ int strncmp2(const unsigned char *first, const unsigned char *second, size_t n);
 
 unsigned char *strcat2(unsigned char *destination, const unsigned char *source);
 unsigned char *strncat2(unsigned char *destination, const unsigned char *source, size_t len);
+
+short beginsWith(unsigned char *string, const char *pattern);
+
+#endif //_TYPECONVERS_

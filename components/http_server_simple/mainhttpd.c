@@ -18,6 +18,7 @@
 //#include "esp_eth.h"
 //#include "protocol_examples_common.h"
 #include <esp_http_server.h>
+#include "freertos/FreeRTOS.h"
 
 #include <time.h>
 #include <sys/time.h>
@@ -27,7 +28,7 @@
 /* A simple example that demonstrates how to create GET and POST
  * handlers for the web server. */
 
-static const char *TAG = "example";
+static const char *TAG_HTTPD = "HTTPD";
 static char iploc[30];
 
 #define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
@@ -48,7 +49,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         buf = malloc(buf_len);
         /* Copy null terminated value string into buffer */
         if (httpd_req_get_hdr_value_str(req, "Host", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Host: %s", buf);
+            ESP_LOGI(TAG_HTTPD, "Found header => Host: %s", buf);
             strncpy(iploc,buf,sizeof(iploc));
         }
 
@@ -59,7 +60,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     if (buf_len > 1) {
         buf = malloc(buf_len);
         if (httpd_req_get_hdr_value_str(req, "Test-Header-2", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Test-Header-2: %s", buf);
+            ESP_LOGI(TAG_HTTPD, "Found header => Test-Header-2: %s", buf);
         }
         free(buf);
     }
@@ -68,7 +69,7 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     if (buf_len > 1) {
         buf = malloc(buf_len);
         if (httpd_req_get_hdr_value_str(req, "Test-Header-1", buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found header => Test-Header-1: %s", buf);
+            ESP_LOGI(TAG_HTTPD, "Found header => Test-Header-1: %s", buf);
         }
         free(buf);
     }
@@ -82,15 +83,15 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     if (buf_len > 1) {
         buf = malloc(buf_len);
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-            ESP_LOGI(TAG, "Found URL query => %s", buf);
+            ESP_LOGI(TAG_HTTPD, "Found URL query => %s", buf);
             char param[32];
             /* Get value of expected key from query string */
             if (httpd_query_key_value(buf, "query1", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query1=%s", param);
+                ESP_LOGI(TAG_HTTPD, "Found URL query parameter => query1=%s", param);
                 
                 token = strtok(param,"=");
                 while( token != NULL ) {
-                    printf( " %s\n", token );
+                    ESP_LOGV(TAG_HTTPD," %s", token );
                     if (strncmp(token,"P",1)==0){
                         segno=1;
                     } else if (strncmp(token,"M",1)==0) {
@@ -103,36 +104,39 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
             }
 
             if (httpd_query_key_value(buf, "query3", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query3=%s", param);
+                ESP_LOGI(TAG_HTTPD, "Found URL query parameter => query3=%s", param);
             }
 
             if (httpd_query_key_value(buf, "query2", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query2=%s", param);
+                ESP_LOGI(TAG_HTTPD, "Found URL query parameter => query2=%s", param);
                 token = strtok(param,"=");
                 while( token != NULL ) {
-                    printf( " %s\n", token );
+                    ESP_LOGD(TAG_HTTPD," %s", token );
                     if((delta_clock=atoi(token))>0){
-                        printf("\r\n********\r\nYou told me: %d!\r\n**************\r\n", delta_clock);
+                        ESP_LOGD(TAG_HTTPD,"\r\n********\r\nYou told me: %d!\r\n**************", delta_clock);
                         time_t now;
                         struct tm timeinfo;
                         //char buffer[100];
                         struct timespec res;
-                        printf("retCode clock_gettime: %d\r\n",clock_gettime(CLOCK_REALTIME,&res));
-                        printf("res.tv_sec: %ld\r\n",res.tv_sec);
-                        printf("res.tv_nsec: %ld\r\n",res.tv_nsec);
+                        int ret_=clock_gettime(CLOCK_REALTIME,&res);
+                        ESP_LOGD(TAG_HTTPD,"retCode clock_gettime: %d\r\n",ret_);
+                        ESP_LOGD(TAG_HTTPD,"res.tv_sec: %ld\r\n",res.tv_sec);
+                        ESP_LOGD(TAG_HTTPD,"res.tv_nsec: %ld\r\n",res.tv_nsec);
                         res.tv_sec+=delta_clock*segno;
-                        printf("retCode clock_gettime: %d\r\n",clock_settime(CLOCK_REALTIME,&res));
-                        printf("res.tv_sec: %ld\r\n",res.tv_sec);
-                        printf("res.tv_nsec: %ld\r\n",res.tv_nsec);    time(&now);
+                        ret_=clock_settime(CLOCK_REALTIME,&res);
+                        ESP_LOGD(TAG_HTTPD,"retCode clock_gettime: %d\r\n",ret_);
+                        ESP_LOGD(TAG_HTTPD,"res.tv_sec: %ld\r\n",res.tv_sec);
+                        ESP_LOGD(TAG_HTTPD,"res.tv_nsec: %ld\r\n",res.tv_nsec);    
+                        time(&now);
                         localtime_r(&now, &timeinfo);
                     } else if((strncmp(buf,"P",1)==0)) {
-                        printf("\r\n********\r\nPLUS SIGN DETECTED!!!!!!!\r\n**************\r\n");
+                        ESP_LOGD(TAG_HTTPD,"\r\n********\r\nPLUS SIGN DETECTED!!!!!!!\r\n**************\r\n");
                         segno=+1;
                     } else if((strncmp(buf,"M",1)==0)) {
-                        printf("\r\n********\r\nMINUS SIGN DETECTED!!!!!!!\r\n**************\r\n");
+                        ESP_LOGD(TAG_HTTPD,"\r\n********\r\nMINUS SIGN DETECTED!!!!!!!\r\n**************\r\n");
                         segno=-1;
                     } else {
-                        printf("\r\n********\r\nthis is not an integer, I won't do anything!!!!!!!\r\n**************\r\n");
+                        ESP_LOGD(TAG_HTTPD,"\r\n********\r\nthis is not an integer, I won't do anything!!!!!!!\r\n**************\r\n");
                         segno=0;
                     }
                     token = strtok(NULL, "=");
@@ -174,13 +178,13 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
   <input type=\"submit\" value=\"Submit\"></form></div></body></html>");
 
     const char* resp_str = (const char*) resp;
-    printf("\r\n+*****\r\nresp_str: %s\r\n******\r\n", resp_str);
+    ESP_LOGD(TAG_HTTPD,"\r\n+*****\r\nresp_str: %s\r\n******", resp_str);
     httpd_resp_send(req, resp_str, strlen(resp_str));
 
     /* After sending the HTTP response the old HTTP request
      * headers are lost. Check if HTTP request headers can be read now. */
     if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
-        ESP_LOGI(TAG, "Request headers lost");
+        ESP_LOGI(TAG_HTTPD, "Request headers lost");
     }
 
     return ESP_OK;
@@ -216,33 +220,36 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
         //httpd_resp_send_chunk(req, buf, ret);
         remaining -= ret;
         /* Log data received */
-        ESP_LOGI(TAG, "=========== RECEIVED DATA ==========");
-        ESP_LOGI(TAG, "%.*s", ret, buf);
-        ESP_LOGI(TAG, "====================================");
+        ESP_LOGI(TAG_HTTPD, "=========== RECEIVED DATA ==========");
+        ESP_LOGI(TAG_HTTPD, "%.*s", ret, buf);
+        ESP_LOGI(TAG_HTTPD, "====================================");
 
         int delta_clock=0;
         static int segno;
         char*  token = strtok(buf,"&=");
         while( token!= NULL ) {
-            printf( " %s\n", token );
+            ESP_LOGD(TAG_HTTPD," %s\n", token );
             if (strncmp(token,"P",1)==0){
                 segno=1;
             } else if (strncmp(token,"M",1)==0) {
                 segno=-1;
             } 
             if((delta_clock=atoi(token))>0){
-                printf("\r\n********\r\nYou told me: %d*%d!\r\n**************\r\n", segno,delta_clock);
+                ESP_LOGD(TAG_HTTPD,"\r\n********\r\nYou told me: %d*%d!\r\n**************", segno,delta_clock);
                 time_t now;
                 struct tm timeinfo;
                 //char buffer[100];
                 struct timespec res;
-                printf("retCode clock_gettime: %d\r\n",clock_gettime(CLOCK_REALTIME,&res));
-                printf("res.tv_sec: %ld\r\n",res.tv_sec);
-                printf("res.tv_nsec: %ld\r\n",res.tv_nsec);
+                int ret_= clock_gettime(CLOCK_REALTIME,&res);
+                ESP_LOGD(TAG_HTTPD,"retCode clock_gettime: %d",ret_);
+                ESP_LOGD(TAG_HTTPD,"res.tv_sec: %ld",res.tv_sec);
+                ESP_LOGD(TAG_HTTPD,"res.tv_nsec: %ld",res.tv_nsec);
                 res.tv_sec+=delta_clock*segno;
-                printf("retCode clock_gettime: %d\r\n",clock_settime(CLOCK_REALTIME,&res));
-                printf("res.tv_sec: %ld\r\n",res.tv_sec);
-                printf("res.tv_nsec: %ld\r\n",res.tv_nsec);    time(&now);
+                ret_=clock_settime(CLOCK_REALTIME,&res);
+                ESP_LOGD(TAG_HTTPD,"retCode clock_gettime: %d",ret_);
+                ESP_LOGD(TAG_HTTPD,"res.tv_sec: %ld",res.tv_sec);
+                ESP_LOGD(TAG_HTTPD,"res.tv_nsec: %ld",res.tv_nsec);    
+                time(&now);
                 localtime_r(&now, &timeinfo);
             }
             token = strtok(NULL, "&=");
@@ -266,7 +273,7 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
         strcat(resp,buffer);
 
         const char* resp_str = (const char*) resp;
-        printf("\r\n+*****\r\nresp_str: %s\r\n******\r\n", resp_str);
+        ESP_LOGD(TAG_HTTPD,"\r\n+*****\r\nresp_str: %s\r\n******", resp_str);
         httpd_resp_send(req, resp_str, strlen(resp_str));
 
     }
@@ -327,14 +334,14 @@ static esp_err_t ctrl_put_handler(httpd_req_t *req)
 
     if (buf == '0') {
         /* URI handlers can be unregistered using the uri string */
-        ESP_LOGI(TAG, "Unregistering /hello and /echo URIs");
+        ESP_LOGI(TAG_HTTPD, "Unregistering /hello and /echo URIs");
         httpd_unregister_uri(req->handle, "/hello");
         httpd_unregister_uri(req->handle, "/echo");
         /* Register the custom error handler */
         httpd_register_err_handler(req->handle, HTTPD_404_NOT_FOUND, http_404_error_handler);
     }
     else {
-        ESP_LOGI(TAG, "Registering /hello and /echo URIs");
+        ESP_LOGI(TAG_HTTPD, "Registering /hello and /echo URIs");
         httpd_register_uri_handler(req->handle, &hello);
         httpd_register_uri_handler(req->handle, &echo);
         /* Unregister custom error handler */
@@ -359,17 +366,17 @@ static httpd_handle_t start_webserver(void)
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
     // Start the httpd server
-    ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
+    ESP_LOGI(TAG_HTTPD, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
         // Set URI handlers
-        ESP_LOGI(TAG, "Registering URI handlers");
+        ESP_LOGI(TAG_HTTPD, "Registering URI handlers");
         httpd_register_uri_handler(server, &hello);
         httpd_register_uri_handler(server, &echo);
         httpd_register_uri_handler(server, &ctrl);
         return server;
     }
 
-    ESP_LOGI(TAG, "Error starting server!");
+    ESP_LOGI(TAG_HTTPD, "Error starting server!");
     return NULL;
 }
 
@@ -384,11 +391,11 @@ static void disconnect_handler(void* arg, esp_event_base_t event_base,
 {
     httpd_handle_t* server = (httpd_handle_t*) arg;
     if (*server) {
-        ESP_LOGE(TAG, "Stopping webserver");
+        ESP_LOGE(TAG_HTTPD, "Stopping webserver");
         stop_webserver(*server);
         *server = NULL;
     } else {
-        ESP_LOGE(TAG, "STA DISCONNECTED BUT server is NULL");
+        ESP_LOGE(TAG_HTTPD, "STA DISCONNECTED BUT server is NULL");
     }
 }
 
@@ -397,10 +404,10 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
 {
     httpd_handle_t* server = (httpd_handle_t*) arg;
     if (*server == NULL) {
-        ESP_LOGE(TAG, "Starting webserver");
+        ESP_LOGE(TAG_HTTPD, "Starting webserver");
         *server = start_webserver();
     }else {
-        ESP_LOGE(TAG, "STA CONNECTED BUT server is NULL");
+        ESP_LOGE(TAG_HTTPD, "STA CONNECTED BUT server is NULL");
     }
 }
 
@@ -411,12 +418,12 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED) {
         wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
-        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
+        ESP_LOGI(TAG_HTTPD, "station "MACSTR" join, AID=%d",
                  MAC2STR(event->mac), event->aid);
         //connect_handler(arg, event_base, event_id, event_data);
     } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
         wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
-        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
+        ESP_LOGI(TAG_HTTPD, "station "MACSTR" leave, AID=%d",
                  MAC2STR(event->mac), event->aid);
         //disconnect_handler(arg, event_base, event_id, event_data);
     }
@@ -439,7 +446,8 @@ void wifi_init_softap(void)
             .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
             .password = EXAMPLE_ESP_WIFI_PASS,
             .max_connection = EXAMPLE_MAX_STA_CONN,
-            .authmode = WIFI_AUTH_WPA_WPA2_PSK
+            .authmode = WIFI_AUTH_WPA_WPA2_PSK,
+            .channel = 11
         },
     };
     if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
@@ -450,8 +458,9 @@ void wifi_init_softap(void)
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s",
+    ESP_LOGI(TAG_HTTPD, "wifi_init_softap finished. SSID:%s password:%s",
              EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+
 }
 
 
@@ -496,7 +505,7 @@ void httpd_app_main(void)
         printf("- %s\n", buffer);
         printf("\n");
         strftime(buffer, sizeof(buffer), "%c", &timeinfo);
-        ESP_LOGI(TAG, "The current date/time in Italy is: %s", buffer);
+        ESP_LOGI(TAG_HTTPD, "The current date/time in Italy is: %s", buffer);
     } while(0); */
     
     static httpd_handle_t server = NULL;

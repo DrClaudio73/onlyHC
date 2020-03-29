@@ -1,3 +1,6 @@
+#ifndef _AUXILIARY_FUNCS_
+#define _AUXILIARY_FUNCS_
+
 #include "sdkconfig.h"
 
 #define NUM_PRES_BLINKS CONFIG_NUM_PRES_BLINKS
@@ -80,3 +83,5 @@
 void foreverRed(unsigned char blink_gpio);
 void presentBlink(unsigned char LedPinNo, unsigned char num_pres_blinks);
 void setupmyRadioHC12(void);
+
+#endif //_AUXILIARY_FUNCS_

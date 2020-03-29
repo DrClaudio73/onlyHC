@@ -3,6 +3,7 @@
 #register_component()
 
 idf_component_register(SRCS "manageUART.c"
-                    INCLUDE_DIRS "./include")
+                    INCLUDE_DIRS "./include"
+                    PRIV_REQUIRES typeconversion)
 
 

@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include "string.h"
+#include "esp_log.h"
 #include "messagehandle.h"
 #include "typeconv.h"
+
+static const char *TAG_1="messagehandle:";
 
 ////////////////////////////////////////////// MESSAGE HANDLING FUNCTIONS //////////////////////////////////////////////
 int strcmpACK(const unsigned char *rcv, const unsigned char *cmd)
@@ -94,22 +97,22 @@ unsigned char *pack_msg(unsigned char addr_from, unsigned char addr_to, const un
 #ifdef DEBUG
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        printf("*%d", msg_to_send[i]);
+        ESP_LOGD(TAG_1,"*%d", msg_to_send[i]);
     }
-    printf("*");
-    printf("\r\n");
+    ESP_LOGD(TAG_1,"*");
+    ESP_LOGD(TAG_1,"\r\n");
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        printf("*%x", msg_to_send[i]);
+        ESP_LOGD(TAG_1,"*%x", msg_to_send[i]);
     }
-    printf("*");
-    printf("\r\n");
+    ESP_LOGD(TAG_1,"*");
+    ESP_LOGD(TAG_1,"\r\n");
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        printf("*%c", msg_to_send[i]);
+        ESP_LOGD(TAG_1,"*%c", msg_to_send[i]);
     }
-    printf("*");
-    printf("\r\n");
+    ESP_LOGD(TAG_1,"*");
+    ESP_LOGD(TAG_1,"\r\n");
 #endif
 
     return msg_to_send;
@@ -148,7 +151,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
     unsigned char CRC_extracted = 0;
     int totale = 0;
 
-    printf("unpack_msg(): processing msg= %s\r\n", msg);
+    ESP_LOGD(TAG_1,"unpack_msg(): processing msg= %s\r\n", msg);
 
     for (unsigned char i = 0; i < strlen2(msg); i++)
     {
@@ -181,7 +184,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 }
                 else
                 {
-                    printf("unpack_msg(): CRC has been CORRECTLY evaluated (%d)! \r\n", received_CRC);
+                    ESP_LOGD(TAG_1,"unpack_msg(): CRC has been CORRECTLY evaluated (%d)! \r\n", received_CRC);
                 }
             }
 
@@ -204,7 +207,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 param_len = msg[i];
                 totale += msg[i];
                 extracted_param_len = 1;
-                printf("unpack_msg(): param_len=%d\r\n", param_len);
+                ESP_LOGV(TAG_1,"unpack_msg(): param_len=%d\r\n", param_len);
             }
 
             if (validated_addr_from && validated_addr_to && extracted_rep_counts && !extracted_cmd_len)
@@ -212,7 +215,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 cmd_len = msg[i];
                 totale += msg[i];
                 extracted_cmd_len = 1;
-                printf("unpack_msg(): cmd_len=%d\r\n", cmd_len);
+                ESP_LOGV(TAG_1,"unpack_msg(): cmd_len=%d\r\n", cmd_len);
             }
 
             if (validated_addr_from && validated_addr_to && !extracted_rep_counts)
@@ -220,7 +223,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 *acknowldged_rep_counts = msg[i];
                 totale += msg[i];
                 extracted_rep_counts = 1;
-                printf("unpack_msg(): rep_counts=%d\r\n", *acknowldged_rep_counts);
+                ESP_LOGV(TAG_1,"unpack_msg(): rep_counts=%d\r\n", *acknowldged_rep_counts);
             }
 
             if ((validated_addr_from) && (!validated_addr_to))
@@ -229,11 +232,11 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 {
                     validated_addr_to = 1;
                     totale += msg[i];
-                    printf("unpack_msg(): Valid addr_to found: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1,"unpack_msg(): Valid addr_to found: %d\r\n", msg[i]);
                 }
                 else
                 {
-                    printf("unpack_msg(): message was addressed to other station: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1,"unpack_msg(): message was addressed to other station: %d\r\n", msg[i]);
                     result = 3;
                     return result;
                 }
@@ -245,11 +248,11 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 {
                     validated_addr_from = 1;
                     totale += msg[i];
-                    printf("unpack_msg(): Valid addr_from found: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1,"unpack_msg(): Valid addr_from found: %d\r\n", msg[i]);
                 }
                 else
                 {
-                    printf("unpack_msg(): message was sent from not allowed station: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1,"unpack_msg(): message was sent from not allowed station: %d\r\n", msg[i]);
                     result = 2;
                     return result;
                 }

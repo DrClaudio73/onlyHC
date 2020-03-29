@@ -1,10 +1,12 @@
 #include "auxiliaryfuncs.h"
 #include "driver/gpio.h"
+#include "esp_log.h"
 // UART driver
 #include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+static const char* TAG="AUXILIARY";
 ////////////////////////////////////////////// SETUP FUNCTIONS //////////////////////////////////////////////
 void setupmyRadioHC12(void)
 {
@@ -47,7 +49,7 @@ void foreverRed(unsigned char blink_gpio)
         vTaskDelay(100 / portTICK_RATE_MS);
         k++;
         k = k % 1000;
-        printf("%d: forever Red!!!!\r\n", k);
+        ESP_LOGV(TAG,"%d: forever Red!!!!", k);
     }
 }
 

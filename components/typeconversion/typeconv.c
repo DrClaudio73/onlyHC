@@ -29,7 +29,13 @@ unsigned char *strcat2(unsigned char *destination, const unsigned char *source)
 {
     return (unsigned char *)strcat((char *)destination, (const char *)source);
 }
+
 unsigned char *strncat2(unsigned char *destination, const unsigned char *source, size_t len)
 {
     return (unsigned char *)strncat((char *)destination, (const char *)source, len);
+}
+
+short beginsWith(unsigned char *string, const char *pattern)
+{
+    return (strncmp2(string, (const unsigned char *)pattern, strlen((const char *)pattern)) == 0);
 }
