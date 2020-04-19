@@ -5,5 +5,5 @@
 
 idf_component_register(SRCS "eventengine.c"
                     INCLUDE_DIRS "./include"
-                    PRIV_REQUIRES messagehandle manageUART typeconversion auxiliaryfuncs)
+                    PRIV_REQUIRES messagehandle manageUART typeconversion auxiliaryfuncs cripter)
 

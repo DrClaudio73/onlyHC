@@ -6,6 +6,7 @@
 #include "manageUART.h"
 #include "messagehandle.h"
 #include "eventengine.h"
+#include "cripter.h"
 
 static const char *TAG_EVT = "EvtEng";
 

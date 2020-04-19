@@ -3,6 +3,7 @@ echo "usage vai.sh -B|V|N -0|1 -M|S|L"
 echo "-B[only build]: build"
 echo "-V[only view]: monitor"
 echo "-N[new]: build app-flash monitor"
+echo "-E[erase]: build flash monitor"
 echo "-0=/dev/ttyUSB0 ; -1=/dev/ttyUSB1"
 echo "-M= master ; -S=Slave; -L=Mobile"
 PORTA_="-p/dev/ttyUSB0"
@@ -10,7 +11,7 @@ PORTA_="-p/dev/ttyUSB0"
 #default is STATION_MASTER
 STATION_="#define DEVOPS_THIS_IS_STATION_MASTER"
 
-while getopts BVN01MSL option; do
+while getopts BVNE01MSL option; do
 case ${option}
 in
 0)  PORTA_="-p/dev/ttyUSB0";;
@@ -18,6 +19,7 @@ in
 B)  BUILD1_="build";;
 V)  BUILD1_="monitor";;
 N)  BUILD1_="build"; BUILD2_="app-flash"; BUILD3_="monitor";;
+E)  BUILD1_="build"; BUILD2_="flash"; BUILD3_="monitor";;
 M)  STATION_="#define DEVOPS_THIS_IS_STATION_MASTER";;
 S)  STATION_="#define DEVOPS_THIS_IS_STATION_SLAVE";;
 L)  STATION_="#define DEVOPS_THIS_IS_STATION_MOBILE";;

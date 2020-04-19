@@ -3,7 +3,7 @@
 
 #include "tipostazione.h"
 
-#define NUM_MAX_CMDS 50                                                             //max number of commands to handle
+#define NUM_MAX_CMDS 10                                                             //max number of commands to handle
 #define NUM_MAX_RETRIES 5                                                           //numero massimo di volte che provo a riemettere il comando prima di arrendermi
 #define NUM_MAX_CHECKS_FOR_ACK 5                                                    //numero massimo di volte che provo a vedere se ho ottenuto l'ACK prima di considerare il comando perso e quindi devo riemetterlo
 #define NUM_CHECKS_FOR_ALREADY_RECEIVED NUM_MAX_RETRIES *NUM_MAX_CHECKS_FOR_ACK + 5 //numero di volte che provo a vedere se ho ho già ricevuto questo comando in precedenza (magari con un repcounts inferiore) per scartarlo. Superato questo check considero nuovamente possibile ricevere un comando siffatto
@@ -16,6 +16,7 @@
 #endif
 #include "driver/gpio.h"
 #include "sdkconfig.h"
+#include "cripter.h"
 
 #define ADDR_MASTER_STATION CONFIG_ADDR_MASTER_STATION
 #define ADDR_SLAVE_STATION CONFIG_ADDR_SLAVE_STATION

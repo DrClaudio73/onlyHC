@@ -15,6 +15,7 @@ int scriviUART(uart_port_t uart_controller, unsigned char *text)
 unsigned char *read_line(uart_port_t uart_controller)
 {
     static unsigned char line[LINE_MAX];
+    memset(line,0,sizeof(line));
     unsigned char *ptr = line;
     //printf("\nread_line on UART: %d\n", (int) uart_controller);
     while (1)
@@ -46,8 +47,7 @@ void stampaStringa(char *line)
 {
     if (strlen(line) > 1)
     {
-        ESP_LOGI(TAG_M,"%s", line);
+        ESP_LOGI(TAG_M,"stampaStringa: %s", line);
         ESP_LOG_BUFFER_HEXDUMP(TAG_M, line, strlen2((const unsigned char *)line), ESP_LOG_INFO);
-
     }
 }

@@ -1,0 +1,17 @@
+menu "Cripter module configuration menu"
+config KEY_SEED
+	string "KEY_SEED"
+	help
+		Enter KEY_SED
+
+config ACA
+	string "ACA"
+	help
+		Enter ACA
+
+config IV
+	string "IV"
+	help
+		Enter IV
+
+endmenu

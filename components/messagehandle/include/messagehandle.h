@@ -1,10 +1,6 @@
 #ifndef _MESSAGE__HANDLE_
 #define _MESSAGE__HANDLE_
 
-// max buffer length
-#define LINE_MAX 2400
-#define FIELD_MAX 255
-#define NUMCELL_MAX 20
 
 ////////////////////////////////////////////// MESSAGE HANDLING FUNCTIONS //////////////////////////////////////////////
 int strcmpACK(const unsigned char *rcv, const unsigned char *cmd);

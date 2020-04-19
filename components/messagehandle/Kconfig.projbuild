@@ -1,0 +1,14 @@
+menu "Message Handler configuration"
+
+choice ENCRYPTION_ENABLED
+		prompt "Chose if messages exchanged have to be encrypted"
+		default ENCRYPTED
+		help
+			Enable/Disable messages encryption
+		config ENCRYPTED
+			bool "ENCRYPTED"
+		config PLAIN
+			bool "PLAIN"
+endchoice
+
+endmenu

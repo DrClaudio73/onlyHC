@@ -3,8 +3,9 @@
 #include "esp_log.h"
 #include "messagehandle.h"
 #include "typeconv.h"
+#include "cripter.h"
 
-static const char *TAG_1="messagehandle:";
+static const char *TAG_1 = "messagehandle:";
 
 ////////////////////////////////////////////// MESSAGE HANDLING FUNCTIONS //////////////////////////////////////////////
 int strcmpACK(const unsigned char *rcv, const unsigned char *cmd)
@@ -47,9 +48,9 @@ void pack_num(unsigned char *msg_to_send, unsigned char valore, unsigned char *k
 
 unsigned char *pack_msg(unsigned char addr_from, unsigned char addr_to, const unsigned char *cmd, const unsigned char *param, unsigned char rep_counts)
 {
-    static unsigned char msg_to_send[LINE_MAX];
     //build message
-
+    //01 02 01 04 01 41505249 30 45 0000000000
+    //01 02 01 04 01 41505249 30 65 0000000000
     //Frame structure
     //CMD: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
     //ANSWER: 'B'+'G'+F7+ADDR_FROM(1 byte)+ADDR_TO(1 byte)+ACKNOWLEDGED_REP_COUNTS+CMD_LEN(1)+PARAM_LEN(1)+CMD(var byte)+PARAM(var byte)+CRC(1 byte)+7F
@@ -78,47 +79,67 @@ unsigned char *pack_msg(unsigned char addr_from, unsigned char addr_to, const un
     //...........
     //(15) ALL                                ---- AAAAMMGGHHMMSSOOOCCC
 
-    memset(msg_to_send, 0, 255);
-    int totale = 0;
+    static unsigned char msg_to_send[LINE_MAX];
+    memset(msg_to_send, 0, sizeof(msg_to_send));
+    static unsigned char msg_tmp[LINE_MAX];
+    memset(msg_tmp, 0, sizeof(msg_tmp));
+    static unsigned char msg_payload[LINE_MAX];
+    memset(msg_payload, 0, sizeof(msg_payload));
+
     unsigned char k = 0;
+    int totale = 0;
+
+    pack_num(msg_tmp, addr_from, &k, &totale);
+    pack_num(msg_tmp, addr_to, &k, &totale);
+    pack_num(msg_tmp, rep_counts, &k, &totale);
+    pack_num(msg_tmp, strlen2(cmd), &k, &totale);
+    pack_num(msg_tmp, strlen2(param), &k, &totale);
+    pack_str(msg_tmp, cmd, &k, &totale);
+    pack_str(msg_tmp, param, &k, &totale);
+    msg_tmp[k++] = calcola_CRC(totale);
+
+    printf("msg_temp: %s\n\r", msg_tmp);
+#ifdef CONFIG_ENCRYPTED
+    int ret = crittalinea(msg_payload, msg_tmp);
+#else
+    strcpy2(msg_payload, msg_tmp);
+#endif
+    printf("msg_payload: %s\n\r", msg_payload);
+    k = 0;
     msg_to_send[k++] = 'B';                 //for synch purpose
     msg_to_send[k++] = 'G';                 //for synch purpose
     msg_to_send[k++] = (unsigned char)0xf7; //start bye
-    pack_num(msg_to_send, addr_from, &k, &totale);
-    pack_num(msg_to_send, addr_to, &k, &totale);
-    pack_num(msg_to_send, rep_counts, &k, &totale);
-    pack_num(msg_to_send, strlen2(cmd), &k, &totale);
-    pack_num(msg_to_send, strlen2(param), &k, &totale);
-    pack_str(msg_to_send, cmd, &k, &totale);
-    pack_str(msg_to_send, param, &k, &totale);
-    msg_to_send[k++] = calcola_CRC(totale);
-    msg_to_send[k] = (unsigned char)0x7f;
-
+    int i = 0;
+    for (i = 0; i < strlen2(msg_payload); i++)
+        msg_to_send[k + i] = msg_payload[i];
+    msg_to_send[k + i] = (unsigned char)0x7f;
+    printf("msg_to_send: %s\n\r", msg_to_send);
+    ESP_LOG_BUFFER_HEX(TAG_1, msg_to_send, strlen2(msg_to_send));
 #ifdef DEBUG
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        ESP_LOGD(TAG_1,"*%d", msg_to_send[i]);
+        ESP_LOGD(TAG_1, "*%d", msg_to_send[i]);
     }
-    ESP_LOGD(TAG_1,"*");
-    ESP_LOGD(TAG_1,"\r\n");
+    ESP_LOGD(TAG_1, "*");
+    ESP_LOGD(TAG_1, "\r\n");
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        ESP_LOGD(TAG_1,"*%x", msg_to_send[i]);
+        ESP_LOGD(TAG_1, "*%x", msg_to_send[i]);
     }
-    ESP_LOGD(TAG_1,"*");
-    ESP_LOGD(TAG_1,"\r\n");
+    ESP_LOGD(TAG_1, "*");
+    ESP_LOGD(TAG_1, "\r\n");
     for (int i = 0; i < strlen2(msg_to_send); i++)
     {
-        ESP_LOGD(TAG_1,"*%c", msg_to_send[i]);
+        ESP_LOGD(TAG_1, "*%c", msg_to_send[i]);
     }
-    ESP_LOGD(TAG_1,"*");
-    ESP_LOGD(TAG_1,"\r\n");
+    ESP_LOGD(TAG_1, "*");
+    ESP_LOGD(TAG_1, "\r\n");
 #endif
 
     return msg_to_send;
 }
 
-unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_from, unsigned char allowed_addr_to, unsigned char **cmd, unsigned char **param, unsigned char *acknowldged_rep_counts)
+unsigned char unpack_msg(const unsigned char *msg_rcved, unsigned char allowed_addr_from, unsigned char allowed_addr_to, unsigned char **cmd, unsigned char **param, unsigned char *acknowldged_rep_counts)
 {
     // RETCODES
     // 0 = OK
@@ -136,7 +157,6 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
     *param = param_rcved;
 
     unsigned char received_CRC = 0;
-
     unsigned char found_startCHR = 0;
     unsigned char result = 5;
     unsigned char validated_addr_from = 0;
@@ -151,12 +171,57 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
     unsigned char CRC_extracted = 0;
     int totale = 0;
 
-    ESP_LOGD(TAG_1,"unpack_msg(): processing msg= %s\r\n", msg);
+    //unsigned char first_enc_char = 0;
+    //unsigned char last_enc_char = 0;
+
+    ESP_LOGD(TAG_1, "unpack_msg(): processing msg_rcved= %s\r\n", msg_rcved);
+    ESP_LOG_BUFFER_HEX(TAG_1,msg_rcved, strlen2(msg_rcved));
+    unsigned char msg[LINE_MAX];
+    memset(msg, 0, sizeof(msg));
+
+#ifdef CONFIG_ENCRYPTED
+    unsigned char msg_payload_enc[LINE_MAX];
+    memset(msg_payload_enc, 0, sizeof(msg_payload_enc));
+    unsigned char m = 0;
+    for (unsigned char i = 0; i < strlen2(msg_rcved); i++)
+    {
+        //printf("unpack_msg(): msgrcv[%d]= %d - %c\r\n", i, msg[i], msg[i]);
+        if (found_startCHR)
+        {
+            msg_payload_enc[m++] = msg_rcved[i];
+            if (msg_rcved[i] == 0x7f){
+                msg_payload_enc[m-1] = 0;
+            }
+        }
+        if ((!found_startCHR) && (msg_rcved[i] == 0xf7))
+        {
+            ESP_LOGI(TAG_1,"found_startCHR");
+            //ESP_LOG_BUFFER_HEX(TAG_1, msg_rcved, strlen2(msg_rcved));
+            //ESP_LOG_BUFFER_HEX(TAG_1, msg_rcved + i + 1, strlen2(msg_rcved + i + 1));
+            //decrittalinea(msg,msg_rcved+i+1);
+            found_startCHR = 1;
+            //first_enc_char = i + 1;
+        }
+    }
+
+    ESP_LOGD(TAG_1, "unpack_msg(): msg_payload_enc= %s\r\n", msg_payload_enc);
+    ESP_LOG_BUFFER_HEX(TAG_1, msg_payload_enc, strlen2(msg_payload_enc));
+
+    if (found_startCHR){
+        decrittalinea(msg, msg_payload_enc);
+    } else {
+        return result;
+    }
+
+    msg[strlen2(msg)]=0x7f;
+    ESP_LOGI(TAG_1,"msg_decripted: %s",msg);
+    ESP_LOG_BUFFER_HEX(TAG_1, msg, strlen2(msg));
+#else
+    strcpy2(msg,msg_rcved);
+#endif
 
     for (unsigned char i = 0; i < strlen2(msg); i++)
     {
-        //printf("unpack_msg(): msgrcv[%d]= %d - %c\r\n", i, msg[i], msg[i]);
-
         if (found_startCHR)
         {
             if (validated_addr_from && validated_addr_to && extracted_rep_counts && extracted_cmd_len && extracted_param_len && (k == cmd_len) && (j == param_len) && CRC_extracted)
@@ -184,7 +249,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 }
                 else
                 {
-                    ESP_LOGD(TAG_1,"unpack_msg(): CRC has been CORRECTLY evaluated (%d)! \r\n", received_CRC);
+                    ESP_LOGD(TAG_1, "unpack_msg(): CRC has been CORRECTLY evaluated (%d)! \r\n", received_CRC);
                 }
             }
 
@@ -207,7 +272,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 param_len = msg[i];
                 totale += msg[i];
                 extracted_param_len = 1;
-                ESP_LOGV(TAG_1,"unpack_msg(): param_len=%d\r\n", param_len);
+                ESP_LOGV(TAG_1, "unpack_msg(): param_len=%d\r\n", param_len);
             }
 
             if (validated_addr_from && validated_addr_to && extracted_rep_counts && !extracted_cmd_len)
@@ -215,7 +280,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 cmd_len = msg[i];
                 totale += msg[i];
                 extracted_cmd_len = 1;
-                ESP_LOGV(TAG_1,"unpack_msg(): cmd_len=%d\r\n", cmd_len);
+                ESP_LOGV(TAG_1, "unpack_msg(): cmd_len=%d\r\n", cmd_len);
             }
 
             if (validated_addr_from && validated_addr_to && !extracted_rep_counts)
@@ -223,7 +288,7 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 *acknowldged_rep_counts = msg[i];
                 totale += msg[i];
                 extracted_rep_counts = 1;
-                ESP_LOGV(TAG_1,"unpack_msg(): rep_counts=%d\r\n", *acknowldged_rep_counts);
+                ESP_LOGV(TAG_1, "unpack_msg(): rep_counts=%d\r\n", *acknowldged_rep_counts);
             }
 
             if ((validated_addr_from) && (!validated_addr_to))
@@ -232,11 +297,11 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 {
                     validated_addr_to = 1;
                     totale += msg[i];
-                    ESP_LOGV(TAG_1,"unpack_msg(): Valid addr_to found: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1, "unpack_msg(): Valid addr_to found: %d\r\n", msg[i]);
                 }
                 else
                 {
-                    ESP_LOGV(TAG_1,"unpack_msg(): message was addressed to other station: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1, "unpack_msg(): message was addressed to other station: %d\r\n", msg[i]);
                     result = 3;
                     return result;
                 }
@@ -248,20 +313,22 @@ unsigned char unpack_msg(const unsigned char *msg, unsigned char allowed_addr_fr
                 {
                     validated_addr_from = 1;
                     totale += msg[i];
-                    ESP_LOGV(TAG_1,"unpack_msg(): Valid addr_from found: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1, "unpack_msg(): Valid addr_from found: %d\r\n", msg[i]);
                 }
                 else
                 {
-                    ESP_LOGV(TAG_1,"unpack_msg(): message was sent from not allowed station: %d\r\n", msg[i]);
+                    ESP_LOGV(TAG_1, "unpack_msg(): message was sent from not allowed station: %d\r\n", msg[i]);
                     result = 2;
                     return result;
                 }
             }
         } //if found_startCHR
+#ifndef CONFIG_ENCRYPTED
         if ((!found_startCHR) && (msg[i] == 0xf7))
         {
             found_startCHR = 1;
         }
+#endif
     } //for (int i)
     //printf("unpack_msg(): ----END UNpack str----\r\n");
     return result;
