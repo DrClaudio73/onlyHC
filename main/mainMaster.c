@@ -157,6 +157,7 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
+
     ESP_LOGI(TAG1, "Set up of output leds ended");
 
     /* CONFIGURING COMMAND INPUT */
@@ -336,7 +337,7 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
     ESP_LOGV(TAG1, "res.tv_sec: %ld", res.tv_sec);
     ESP_LOGV(TAG1, "res.tv_nsec: %ld", res.tv_nsec);
-    res.tv_sec += 1587281658; // 1584425168; //1583819573;
+    res.tv_sec += 1588485951; //1587281658; // 1584425168; //1583819573;
     ret_ = clock_settime(CLOCK_REALTIME, &res);
     ESP_LOGV(TAG1, "retCode clock_gettime: %d", ret_);
     ESP_LOGV(TAG1, "res.tv_sec: %ld", res.tv_sec);
@@ -380,6 +381,8 @@ void setup(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
     strftime((char *)db->ORA, sizeof(db->ORA), "%H%M%S", &timeinfo);
     db->num_APRI_received = 0;
     db->num_TOT_received = 0;
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_GARAGE_CMD_GPIO, 1)); //releasing GARAGE relay
+    ESP_ERROR_CHECK(gpio_set_level((gpio_num_t)SLAVE_BIGGATE_CMD_GPIO, 1)); //releasing GARAGE relay
 #else
     // change the timezone to Italy
     setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
@@ -919,6 +922,8 @@ int loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
                 //REPORT COMMAND HANDLING
                 if (beginsWith(detected_event->valore_evento.cmd_received, "RPT"))
                 {
+                    //give_gpio_feedback(0, 0); //swithces off NOK and OK led since a new command is going to be issued
+
                     //updating DB wall clock
                     time(&now);
                     localtime_r(&now, &timeinfo);
@@ -980,7 +985,7 @@ int loop(commands_t *my_commands, commands_t *rcv_commands, miodb_t *db)
             }
         }
         else if (detected_event->type_of_event == RECEIVED_ACK)
-        { //for now this should not happen in SLAVE station since it does not emit commands
+        { //for now this should not happen in SLAVE station since it does not emit commands (with RSPcommands this is no longer TRUE)
             ESP_LOGI(TAG1, "loop(): received and ACK for command:");
             give_gpio_feedback(1, 0); //NOK led is switched off and OK led is lit since an ACK has been received
             ESP_LOGD(TAG1, "loop():detected_event->valore_evento.cmd_received: %s", detected_event->valore_evento.cmd_received);
@@ -1346,8 +1351,11 @@ void app_main()
     xTaskCreate(&timeout_task, "timeout_task", 2048, NULL, 5, NULL);
 
     ESP_LOGE(TAG1, "Entering while loop!!!!!");
-    while (1)
+    while (1) {
         loop(&my_commands, &rcv_commands, &db);
-    fflush(stdout);
+        //invia_comando(UART_NUM_2, &my_commands, ADDR_MOBILE_STATION, ADDR_SLAVE_STATION, (unsigned char *)"APRI", (unsigned char *) "33", 1); //FORWARD RECEIVED COMMAND TO SLAVE STATION
+       //vTaskDelay(999 / portTICK_RATE_MS);
+    }
+   fflush(stdout);
     return;
 }

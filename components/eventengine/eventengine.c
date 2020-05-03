@@ -276,7 +276,7 @@ unsigned char check_rcved_acks(evento_t *detected_event, commands_t *my_commands
         ESP_LOGD(TAG_EVT,"check_rcv_acks():detected_event->valore_evento.cmd_received=%s", detected_event->valore_evento.cmd_received);
         ESP_LOGD(TAG_EVT,"check_rcv_acks():detected_event->valore_evento.param_received=%s", detected_event->valore_evento.param_received);
         ESP_LOGD(TAG_EVT,"check_rcv_acks():detected_event->valore_evento.ack_rep_counts=%u", detected_event->valore_evento.ack_rep_counts);
-        ESP_LOGD(TAG_EVT,"check_rcv_acks():detected_event->valore_eventopair_addr=%u", detected_event->valore_evento.pair_addr);
+        ESP_LOGD(TAG_EVT,"check_rcv_acks():detected_event->valore_evento.pair_addr=%u", detected_event->valore_evento.pair_addr);
         ESP_LOGD(TAG_EVT,"check_rcv_acks():uart_controller=%u", detected_event->valore_evento.uart_controller);
         //check if current event is an ACK
         i = 0;
@@ -288,7 +288,7 @@ unsigned char check_rcved_acks(evento_t *detected_event, commands_t *my_commands
             ESP_LOGV(TAG_EVT,"check_rcv_acks():my_commands->commands_status[%u].param=%s", i, my_commands->commands_status[i].param);
             //printf("check_rcv_acks():detected_event->valore_evento.ack_rep_counts=%u", detected_event->valore_evento.ack_rep_counts);
             ESP_LOGV(TAG_EVT,"check_rcv_acks():my_commands->commands_status[%u].rep_counts=%u", i, my_commands->commands_status[i].rep_counts);
-            //printf("check_rcv_acks():detected_event->valore_eventopair_addr=%u", detected_event->valore_evento.pair_addr);
+            //printf("check_rcv_acks():detected_event->valore_evento.pair_addr=%u", detected_event->valore_evento.pair_addr);
             ESP_LOGV(TAG_EVT,"check_rcv_acks():my_commands->commands_status[%u].addr_pair=%u", i, my_commands->commands_status[i].addr_pair);
             //printf("check_rcv_acks():uart_controller=%u", detected_event->valore_evento.uart_controller);
             ESP_LOGV(TAG_EVT,"check_rcv_acks():my_commands->commands_status[%u].uart_controller=%u", i, my_commands->commands_status[i].uart_controller);

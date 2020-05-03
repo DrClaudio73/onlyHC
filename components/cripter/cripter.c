@@ -73,7 +73,7 @@ int my_pad_from_hexstr(unsigned char P[MAX_CRIPTER_BLOCKS][16], unsigned char *i
     }
     else
     {
-        mbedtls_printf("Caso 2  \n");
+        //mbedtls_printf("Caso 2  \n");
         for (int i = 0; i <= (int)strlen / 32; i++)
         {
             n_blocks++;
@@ -97,7 +97,7 @@ int my_pad_direct(unsigned char P[MAX_CRIPTER_BLOCKS][16], unsigned char *instr,
     char n_blocks = 0;
     if (strlen % 16 == 0)
     {
-        mbedtls_printf("Caso 1  \n");
+        //mbedtls_printf("Caso 1  \n");
         for (int i = 0; i < (int)strlen / 16; i++)
         {
             n_blocks++;
@@ -112,7 +112,7 @@ int my_pad_direct(unsigned char P[MAX_CRIPTER_BLOCKS][16], unsigned char *instr,
     }
     else
     {
-        mbedtls_printf("Caso 2  \n");
+        //mbedtls_printf("Caso 2  \n");
         for (int i = 0; i <= (int)strlen / 16; i++)
         {
             n_blocks++;

@@ -165,6 +165,28 @@ config SLAVE_BIGGATE_CMD_GPIO
 
 		GPIOs 35-39 are input-only so cannot be used as outputs.
 
+config SLAVE_GPIO_OK
+    int "Slave station OK GPIO number"
+	range 0 34
+	default 12
+	help
+		GPIO number (IOxx) to notify OK of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
+config SLAVE_GPIO_NOK
+    int "Slave station NOT OK GPIO number"
+	range 0 34
+	default 13
+	help
+		GPIO number (IOxx) to notify KO of last command.
+
+		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
+
+		GPIOs 35-39 are input-only so cannot be used as outputs.
+
 config HC12SETGPIO
     int "GPIO number for HC12 module SET pin"
 	range 0 34
